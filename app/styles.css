@@ -71,6 +71,33 @@ html, body {
   touch-action: none;
   cursor: crosshair;
 }
+.editor[data-theme="light"] { background: #fff; }
+.editor[data-theme="light"] .hud.top .btn.ghost,
+.editor[data-theme="light"] .zoom { color: #111; }
+.editor[data-theme="light"] .hud.top .btn.ghost:hover { background: rgba(0, 0, 0, 0.06); }
+.editor[data-theme="light"] .jot-id,
+.editor[data-theme="light"] .save-state { color: #6a6a74; }
+.editor[data-theme="light"] .save-state.error { color: #c0392b; }
+.editor.erasing-mode .layer.live, .editor.erasing .layer.live { cursor: cell; }
+.btn.eraser[aria-pressed="true"] { border-color: var(--pink, #ff8ac2); color: #ff8ac2; }
+.theme-btn { font-size: 16px; }
+.export-wrap { position: relative; }
+.export-menu {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+}
+.export-wrap.open .export-menu { display: flex; }
+.export-menu .btn { min-width: 72px; text-align: center; }
 .editor.pan-ready .layer.live { cursor: grab; }
 .editor.panning .layer.live { cursor: grabbing; }
 
@@ -215,7 +242,8 @@ html, body {
   .swatch { width: 38px; height: 38px; }
   .size { width: 42px; height: 42px; }
   .btn.icon { width: 44px; height: 44px; font-size: 20px; }
-  .btn.clear, .btn.paper-btn { font-size: 14px; padding: 10px 12px; min-width: 0; }
+  .btn.clear, .btn.paper-btn, .btn.export-btn { font-size: 14px; padding: 10px 10px; min-width: 0; }
+  .export-menu { left: auto; right: 0; transform: none; }
   .hud.top { gap: 6px; }
   .zoom { min-width: 48px; }
 }

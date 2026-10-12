@@ -1,7 +1,8 @@
 // Jot editor: full-screen pen canvas with pan/zoom, undo, autosave.
 import { View, fitCanvas, beginFrame, drawStrokes, drawStroke, drawPaper, PAPER_MODES } from './canvas.js';
-import { createSmoother, simulatePressure, PEN_SIZES } from './stroke.js';
-import { PALETTE } from './palette.js';
+import { createSmoother, simulatePressure, hitTestStroke, PEN_SIZES } from './stroke.js';
+import { PALETTE, colorForTheme } from './palette.js';
+import { jotToSVG, jotToPNG, downloadBlob } from './export.js';
 
 const SAVE_DELAY_MS = 400;
 // Platform convention: Cmd on macOS, Ctrl elsewhere.
@@ -13,7 +14,9 @@ export function mountEditor(root, store, jot) {
   const prefs = loadPrefs();
   const view = new View(jot.view);
   const strokes = jot.strokes;
-  const undoStack = []; // actions: { type: 'add', stroke } | { type: 'clear', strokes }
+  // actions: { type: 'add', stroke } | { type: 'clear', strokes }
+  //        | { type: 'erase', items: [{ index, stroke }] } | { type: 'move', dx, dy }
+  const undoStack = [];
   const redoStack = [];
   let color = prefs.color;
   let sizeKey = prefs.size;
@@ -41,12 +44,22 @@ export function mountEditor(root, store, jot) {
             <button class="btn icon pick pick-size" title="Pen size" aria-haspopup="true" aria-expanded="false"><span class="dot"></span></button>
             <div class="sizes popover" role="radiogroup" aria-label="Pen size"></div>
             <span class="divider"></span>
+            <button class="btn icon eraser" title="Eraser: tap or drag over strokes (E, or hold Alt)" aria-label="Eraser" aria-pressed="false">◌</button>
+            <span class="divider"></span>
             <button class="btn icon undo" title="Undo (${MOD_LABEL}Z)" aria-label="Undo">↶</button>
             <button class="btn icon redo" title="Redo (Shift+${MOD_LABEL}Z)" aria-label="Redo">↷</button>
           </div>
           <span class="divider"></span>
           <div class="group actions">
             <button class="btn paper-btn" title="Paper: none / grid / lines / dots (G)"></button>
+            <button class="btn icon theme-btn" title="Light / dark canvas (L)" aria-label="Toggle light canvas"></button>
+            <div class="export-wrap">
+              <button class="btn export-btn" title="Export (${MOD_LABEL}E for PNG, Shift+${MOD_LABEL}E for SVG)" aria-haspopup="true" aria-expanded="false">Export</button>
+              <div class="export-menu popover" role="menu">
+                <button class="btn" data-format="png" role="menuitem">PNG</button>
+                <button class="btn" data-format="svg" role="menuitem">SVG</button>
+              </div>
+            </div>
             <span class="divider"></span>
             <button class="btn clear" title="Clear this jot (Delete)">Clear</button>
           </div>
@@ -71,6 +84,10 @@ export function mountEditor(root, store, jot) {
   const toast = el.querySelector('.toast');
   const pickColor = el.querySelector('.pick-color');
   const pickSize = el.querySelector('.pick-size');
+  const eraserBtn = el.querySelector('.eraser');
+  const themeBtn = el.querySelector('.theme-btn');
+  const exportBtn = el.querySelector('.export-btn');
+  const exportWrap = el.querySelector('.export-wrap');
   const swatches = el.querySelector('.swatches');
   const sizes = el.querySelector('.sizes');
 
@@ -78,7 +95,6 @@ export function mountEditor(root, store, jot) {
   PALETTE.forEach((c, i) => {
     const b = document.createElement('button');
     b.className = 'swatch';
-    b.style.setProperty('--c', c.hex);
     b.title = `${c.name} (${i + 1})`;
     b.setAttribute('role', 'radio');
     b.dataset.hex = c.hex;
@@ -95,6 +111,12 @@ export function mountEditor(root, store, jot) {
     b.addEventListener('click', () => setSize(key));
     sizes.append(b);
   }
+  eraserBtn.addEventListener('click', () => setTool(tool === 'eraser' ? 'pen' : 'eraser'));
+  themeBtn.addEventListener('click', () => setTheme(jot.theme === 'light' ? 'dark' : 'light'));
+  exportBtn.addEventListener('click', () => togglePopover(exportWrap));
+  for (const b of el.querySelectorAll('.export-menu button')) {
+    b.addEventListener('click', () => exportJot(b.dataset.format));
+  }
   undoBtn.addEventListener('click', undo);
   redoBtn.addEventListener('click', redo);
   clearBtn.addEventListener('click', clearJot);
@@ -104,10 +126,46 @@ export function mountEditor(root, store, jot) {
     onViewChanged();
   });
 
+  let tool = 'pen'; // 'pen' | 'eraser'
+  function setTool(next) {
+    tool = next;
+    el.classList.toggle('erasing-mode', tool === 'eraser');
+    eraserBtn.setAttribute('aria-pressed', String(tool === 'eraser'));
+  }
+
+  function applyTheme() {
+    const theme = jot.theme ?? 'dark';
+    el.dataset.theme = theme;
+    themeBtn.textContent = theme === 'light' ? '☾' : '☀';
+    for (const b of swatches.children) b.style.setProperty('--c', colorForTheme(b.dataset.hex, theme));
+    pickColor.querySelector('.dot').style.background = colorForTheme(color, theme);
+  }
+  function setTheme(theme) {
+    jot.theme = theme;
+    applyTheme();
+    paperDirty = true;
+    baseDirty = true;
+    liveDirty = true;
+    requestRender();
+    scheduleSave();
+  }
+
+  async function exportJot(format) {
+    closePopovers();
+    const name = `jotted-${jot.id.slice(-6).toLowerCase()}`;
+    if (format === 'svg') {
+      downloadBlob(new Blob([jotToSVG(jot)], { type: 'image/svg+xml' }), `${name}.svg`);
+    } else {
+      const blob = await jotToPNG(jot, drawStroke);
+      if (blob) downloadBlob(blob, `${name}.png`);
+    }
+    showToast(`Exported ${format.toUpperCase()}`);
+  }
+
   function setColor(hex) {
     color = hex;
     for (const b of swatches.children) b.setAttribute('aria-checked', String(b.dataset.hex === hex));
-    pickColor.querySelector('.dot').style.background = hex;
+    pickColor.querySelector('.dot').style.background = colorForTheme(hex, jot.theme);
     closePopovers();
     savePrefs();
   }
@@ -125,12 +183,12 @@ export function mountEditor(root, store, jot) {
     const open = !group.classList.contains('open');
     closePopovers();
     group.classList.toggle('open', open);
-    group.querySelector('.pick').setAttribute('aria-expanded', String(open));
+    group.querySelector('.pick, .export-btn').setAttribute('aria-expanded', String(open));
   }
   function closePopovers() {
-    for (const g of el.querySelectorAll('.group.open')) {
+    for (const g of el.querySelectorAll('.group.open, .export-wrap.open')) {
       g.classList.remove('open');
-      g.querySelector('.pick').setAttribute('aria-expanded', 'false');
+      g.querySelector('.pick, .export-btn').setAttribute('aria-expanded', 'false');
     }
   }
   pickColor.addEventListener('click', () => togglePopover(pickColor.parentElement));
@@ -205,18 +263,18 @@ export function mountEditor(root, store, jot) {
     frame = 0;
     if (paperDirty) {
       paperDirty = false;
-      drawPaper(paperCtx, view, jot.paper, paper.clientWidth, paper.clientHeight, dpr);
+      drawPaper(paperCtx, view, jot.paper, paper.clientWidth, paper.clientHeight, dpr, jot.theme);
     }
     if (baseDirty) {
       baseDirty = false;
       beginFrame(baseCtx, view, dpr);
-      drawStrokes(baseCtx, strokes, view, base.clientWidth, base.clientHeight);
+      drawStrokes(baseCtx, strokes, view, base.clientWidth, base.clientHeight, jot.theme);
       zoomBtn.textContent = `${Math.round(view.scale * 100)}%`;
     }
     if (liveDirty) {
       liveDirty = false;
       beginFrame(liveCtx, view, dpr);
-      if (current) drawStroke(liveCtx, current.stroke);
+      if (current) drawStroke(liveCtx, current.stroke, jot.theme);
     }
   }
 
@@ -258,7 +316,9 @@ export function mountEditor(root, store, jot) {
     if (current || undoStack.length === 0) return;
     const action = undoStack.pop();
     if (action.type === 'add') strokes.pop();
-    else strokes.push(...action.strokes);
+    else if (action.type === 'clear') strokes.push(...action.strokes);
+    else if (action.type === 'erase') for (const { index, stroke } of action.items) strokes.splice(index, 0, stroke);
+    else if (action.type === 'move') shiftAll(-action.dx, -action.dy);
     redoStack.push(action);
     afterHistoryChange();
   }
@@ -266,9 +326,31 @@ export function mountEditor(root, store, jot) {
     if (current || redoStack.length === 0) return;
     const action = redoStack.pop();
     if (action.type === 'add') strokes.push(action.stroke);
-    else strokes.length = 0;
+    else if (action.type === 'clear') strokes.length = 0;
+    else if (action.type === 'erase') for (const { stroke } of action.items) strokes.splice(strokes.indexOf(stroke), 1);
+    else if (action.type === 'move') shiftAll(action.dx, action.dy);
     undoStack.push(action);
     afterHistoryChange();
+  }
+
+  function shiftAll(dx, dy) {
+    for (const s of strokes) for (const p of s.points) { p[0] = round(p[0] + dx, 2); p[1] = round(p[1] + dy, 2); }
+  }
+
+  // Shift+arrows nudge the whole jot; rapid presses merge into one undo step.
+  let lastNudge = 0;
+  function nudge(dx, dy) {
+    if (current || strokes.length === 0) return;
+    shiftAll(dx, dy);
+    const last = undoStack[undoStack.length - 1];
+    if (last?.type === 'move' && performance.now() - lastNudge < 800) {
+      last.dx += dx;
+      last.dy += dy;
+      afterHistoryChange();
+    } else {
+      commit({ type: 'move', dx, dy });
+    }
+    lastNudge = performance.now();
   }
   function commit(action) {
     undoStack.push(action);
@@ -367,9 +449,57 @@ export function mountEditor(root, store, jot) {
     el.classList.add('panning');
   }
 
+  // ---- Eraser ------------------------------------------------------------
+  let erasing = null; // { pointerId, items: [{ index, stroke }] }
+
+  function wantsErase(e) {
+    if (tool === 'eraser' || e.altKey) return true;
+    // Stylus eraser end or barrel button.
+    return e.pointerType === 'pen' && ((e.buttons & 32) !== 0 || e.button === 5);
+  }
+  function beginErase(e) {
+    erasing = { pointerId: e.pointerId, items: [] };
+    capture(e.pointerId);
+    el.classList.add('erasing');
+    eraseAt(e);
+  }
+  function eraseAt(e) {
+    const events = e.getCoalescedEvents?.() ?? [];
+    if (events.length === 0) events.push(e);
+    const tol = 6 / view.scale;
+    for (const ev of events) {
+      const [wx, wy] = view.screenToWorld(ev.clientX, ev.clientY);
+      for (let i = strokes.length - 1; i >= 0; i--) {
+        if (hitTestStroke(strokes[i], wx, wy, tol)) {
+          erasing.items.push({ index: i, stroke: strokes[i] });
+          strokes.splice(i, 1);
+          baseDirty = true;
+        }
+      }
+    }
+    requestRender();
+  }
+  function endErase() {
+    const items = erasing.items.sort((a, b) => a.index - b.index);
+    erasing = null;
+    el.classList.remove('erasing');
+    if (items.length) commit({ type: 'erase', items });
+  }
+
   function onPointerDown(e) {
     closePopovers();
+    if (erasing) return;
+    if (e.pointerType !== 'touch' && !current && !mousePan && wantsErase(e)) {
+      e.preventDefault();
+      beginErase(e);
+      return;
+    }
     if (e.pointerType === 'touch') {
+      if (tool === 'eraser' && !current && touches.size === 0) {
+        touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        beginErase(e);
+        return;
+      }
       if (current && current.pointerType === 'pen') return; // palm while writing with a pen
       touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
       capture(e.pointerId);
@@ -381,7 +511,7 @@ export function mountEditor(root, store, jot) {
       return;
     }
     if (current || mousePan) return;
-    const wantsPan = e.button === 1 || (e.button === 0 && spaceHeld) || (e.pointerType === 'pen' && e.button === 5);
+    const wantsPan = e.button === 1 || (e.button === 0 && spaceHeld);
     if (wantsPan) {
       e.preventDefault();
       panStart(e);
@@ -394,6 +524,10 @@ export function mountEditor(root, store, jot) {
   }
 
   function onPointerMove(e) {
+    if (erasing && e.pointerId === erasing.pointerId) {
+      eraseAt(e);
+      return;
+    }
     if (current && e.pointerId === current.pointerId) {
       extendStroke(e);
       return;
@@ -425,6 +559,10 @@ export function mountEditor(root, store, jot) {
 
   function onPointerUp(e) {
     touches.delete(e.pointerId);
+    if (erasing && e.pointerId === erasing.pointerId) {
+      endErase();
+      return;
+    }
     if (current && e.pointerId === current.pointerId) {
       endStroke(e, e.type === 'pointercancel');
       return;
@@ -462,6 +600,18 @@ export function mountEditor(root, store, jot) {
       el.classList.add('pan-ready');
     } else if (/^[1-6]$/.test(e.key) && !mod) {
       setColor(PALETTE[Number(e.key) - 1].hex);
+    } else if (mod && e.key.toLowerCase() === 'e') {
+      e.preventDefault();
+      exportJot(e.shiftKey ? 'svg' : 'png');
+    } else if (e.key.toLowerCase() === 'e' && !mod) {
+      setTool(tool === 'eraser' ? 'pen' : 'eraser');
+    } else if (e.key.toLowerCase() === 'l' && !mod) {
+      setTheme(jot.theme === 'light' ? 'dark' : 'light');
+    } else if (e.shiftKey && e.key.startsWith('Arrow')) {
+      e.preventDefault();
+      const step = 10 / view.scale;
+      nudge(e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0,
+            e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0);
     } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
       e.preventDefault();
       cycleColor(e.key === 'ArrowRight' ? 1 : -1);
@@ -516,6 +666,7 @@ export function mountEditor(root, store, jot) {
   window.addEventListener('beforeunload', onBeforeUnload);
   document.addEventListener('visibilitychange', onVisibility);
 
+  applyTheme();
   setColor(color);
   setSize(sizeKey);
   paperBtn.textContent = PAPER_LABELS[jot.paper] ?? 'Plain';

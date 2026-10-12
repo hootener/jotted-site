@@ -1,0 +1,70 @@
+// Export a jot as SVG or PNG, cropped to the ink with padding.
+import { strokeOutline, strokeBounds, outlineToPathData } from './stroke.js';
+import { colorForTheme, THEMES } from './palette.js';
+
+const PAD = 32;
+
+export function jotBounds(jot) {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const s of jot.strokes) {
+    if (!s.points.length) continue;
+    const b = strokeBounds(s);
+    minX = Math.min(minX, b.minX);
+    minY = Math.min(minY, b.minY);
+    maxX = Math.max(maxX, b.maxX);
+    maxY = Math.max(maxY, b.maxY);
+  }
+  if (minX === Infinity) return { minX: 0, minY: 0, maxX: 400, maxY: 300 };
+  return { minX: minX - PAD, minY: minY - PAD, maxX: maxX + PAD, maxY: maxY + PAD };
+}
+
+export function jotToSVG(jot) {
+  const theme = jot.theme ?? 'dark';
+  const b = jotBounds(jot);
+  const w = Math.ceil(b.maxX - b.minX);
+  const h = Math.ceil(b.maxY - b.minY);
+  const paths = jot.strokes
+    .map((s) => {
+      const d = outlineToPathData(strokeOutline(s.points, { size: s.size }));
+      return d ? `  <path fill="${colorForTheme(s.color, theme)}" d="${d}"/>` : '';
+    })
+    .filter(Boolean)
+    .join('\n');
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="${f(b.minX)} ${f(b.minY)} ${w} ${h}">
+  <rect x="${f(b.minX)}" y="${f(b.minY)}" width="${w}" height="${h}" fill="${THEMES[theme].bg}"/>
+${paths}
+</svg>
+`;
+}
+
+/** Renders the jot to a PNG Blob at `scale` device pixels per world unit. */
+export function jotToPNG(jot, drawStroke, scale = 2) {
+  const theme = jot.theme ?? 'dark';
+  const b = jotBounds(jot);
+  const w = Math.ceil(b.maxX - b.minX);
+  const h = Math.ceil(b.maxY - b.minY);
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.ceil(w * scale);
+  canvas.height = Math.ceil(h * scale);
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = THEMES[theme].bg;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.setTransform(scale, 0, 0, scale, -b.minX * scale, -b.minY * scale);
+  for (const s of jot.strokes) drawStroke(ctx, s, theme);
+  return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+}
+
+export function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function f(v) {
+  return Number(v.toFixed(2));
+}

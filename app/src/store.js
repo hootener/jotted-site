@@ -17,6 +17,7 @@ export function newJot(now = Date.now) {
     updatedAt: t,
     view: { x: 0, y: 0, scale: 1 },
     paper: 'none',
+    theme: 'dark',
     strokes: [],
   };
 }
@@ -26,6 +27,7 @@ export function normalizeJot(jot, id) {
   jot.strokes ??= [];
   jot.view ??= { x: 0, y: 0, scale: 1 };
   jot.paper ??= 'none';
+  jot.theme ??= 'dark';
   return jot;
 }
 

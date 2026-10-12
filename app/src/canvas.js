@@ -1,5 +1,6 @@
 // View transform and canvas rendering helpers.
 import { strokeOutline, strokeBounds } from './stroke.js';
+import { colorForTheme, THEMES } from './palette.js';
 
 export const MIN_SCALE = 0.1;
 export const MAX_SCALE = 16;
@@ -57,10 +58,10 @@ export function pathFromOutline(outline) {
   return path;
 }
 
-export function drawStroke(ctx, stroke) {
+export function drawStroke(ctx, stroke, theme = 'dark') {
   const outline = strokeOutline(stroke.points, { size: stroke.size });
   if (outline.length === 0) return;
-  ctx.fillStyle = stroke.color;
+  ctx.fillStyle = colorForTheme(stroke.color, theme);
   ctx.fill(pathFromOutline(outline));
 }
 
@@ -84,14 +85,14 @@ export function beginFrame(ctx, view, dpr) {
 }
 
 /** Draw only strokes whose bounds intersect the visible world rect. */
-export function drawStrokes(ctx, strokes, view, cssWidth, cssHeight) {
+export function drawStrokes(ctx, strokes, view, cssWidth, cssHeight, theme = 'dark') {
   const [vx0, vy0] = view.screenToWorld(0, 0);
   const [vx1, vy1] = view.screenToWorld(cssWidth, cssHeight);
   for (const s of strokes) {
     if (s.points.length === 0) continue;
     const b = strokeBounds(s);
     if (b.maxX < vx0 || b.minX > vx1 || b.maxY < vy0 || b.minY > vy1) continue;
-    drawStroke(ctx, s);
+    drawStroke(ctx, s, theme);
   }
 }
 
@@ -104,8 +105,9 @@ export function renderThumbnail(jot, width, height) {
   canvas.style.width = `${width}px`;
   canvas.style.height = `${height}px`;
   const ctx = canvas.getContext('2d');
+  const theme = jot.theme ?? 'dark';
   ctx.scale(dpr, dpr);
-  ctx.fillStyle = '#000';
+  ctx.fillStyle = THEMES[theme].bg;
   ctx.fillRect(0, 0, width, height);
   if (jot.strokes.length === 0) return canvas;
 
@@ -122,21 +124,19 @@ export function renderThumbnail(jot, width, height) {
   const ox = (width - (maxX - minX) * scale) / 2 - minX * scale;
   const oy = (height - (maxY - minY) * scale) / 2 - minY * scale;
   ctx.setTransform(dpr * scale, 0, 0, dpr * scale, dpr * ox, dpr * oy);
-  for (const s of jot.strokes) drawStroke(ctx, s);
+  for (const s of jot.strokes) drawStroke(ctx, s, theme);
   return canvas;
 }
 
 export const PAPER_MODES = ['none', 'grid', 'lines', 'dots'];
 const PAPER_SPACING = 40; // world units, roughly a ruled-paper line gap at 100%
-const PAPER_LINE = 'rgba(255, 255, 255, 0.07)';
-const PAPER_DOT = 'rgba(255, 255, 255, 0.22)';
 
 /**
  * Draw subtle ruled paper behind the strokes. Rendered in screen space so
  * lines stay crisp at any zoom; spacing doubles as you zoom out so the
  * pattern never gets dense.
  */
-export function drawPaper(ctx, view, mode, cssWidth, cssHeight, dpr) {
+export function drawPaper(ctx, view, mode, cssWidth, cssHeight, dpr, theme = 'dark') {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, cssWidth, cssHeight);
   if (mode === 'none') return;
@@ -151,7 +151,7 @@ export function drawPaper(ctx, view, mode, cssWidth, cssHeight, dpr) {
   const y0 = ((view.y % step) + step) % step;
 
   if (mode === 'dots') {
-    ctx.fillStyle = PAPER_DOT;
+    ctx.fillStyle = THEMES[theme].paperDot;
     const r = Math.min(1.6, Math.max(1, step / 32));
     for (let y = y0; y <= cssHeight; y += step) {
       for (let x = x0; x <= cssWidth; x += step) {
@@ -163,7 +163,7 @@ export function drawPaper(ctx, view, mode, cssWidth, cssHeight, dpr) {
     return;
   }
 
-  ctx.strokeStyle = PAPER_LINE;
+  ctx.strokeStyle = THEMES[theme].paperLine;
   ctx.lineWidth = 1;
   ctx.beginPath();
   for (let y = y0; y <= cssHeight; y += step) {

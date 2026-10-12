@@ -168,3 +168,41 @@ function smoothstep(t) {
   t = Math.min(1, Math.max(0, t));
   return t * t * (3 - 2 * t);
 }
+
+/** True if (x, y) lies within `tolerance` of the stroke's inked path. */
+export function hitTestStroke(stroke, x, y, tolerance = 0) {
+  const pts = stroke.points;
+  const reach = stroke.size / 2 + tolerance;
+  if (pts.length === 0) return false;
+  if (pts.length === 1) return Math.hypot(pts[0][0] - x, pts[0][1] - y) <= reach;
+  for (let i = 1; i < pts.length; i++) {
+    if (distToSegment(x, y, pts[i - 1], pts[i]) <= reach) return true;
+  }
+  return false;
+}
+
+function distToSegment(px, py, a, b) {
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  const len2 = dx * dx + dy * dy;
+  let t = len2 === 0 ? 0 : ((px - a[0]) * dx + (py - a[1]) * dy) / len2;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(px - (a[0] + dx * t), py - (a[1] + dy * t));
+}
+
+/** SVG path data for an outline polygon, smoothed with midpoint quadratics. */
+export function outlineToPathData(outline, digits = 2) {
+  const n = outline.length;
+  if (n < 3) return '';
+  const f = (v) => Number(v.toFixed(digits));
+  const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+  let m = mid(outline[0], outline[1]);
+  let d = `M${f(m[0])} ${f(m[1])}`;
+  for (let i = 1; i <= n; i++) {
+    const a = outline[i % n];
+    const b = outline[(i + 1) % n];
+    m = mid(a, b);
+    d += `Q${f(a[0])} ${f(a[1])} ${f(m[0])} ${f(m[1])}`;
+  }
+  return d + 'Z';
+}
