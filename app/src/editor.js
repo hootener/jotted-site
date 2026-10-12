@@ -4,6 +4,9 @@ import { createSmoother, simulatePressure, PEN_SIZES } from './stroke.js';
 import { PALETTE } from './palette.js';
 
 const SAVE_DELAY_MS = 400;
+// Platform convention: Cmd on macOS, Ctrl elsewhere.
+const IS_MAC = /Mac|iPhone|iPad/.test(navigator.platform) || navigator.userAgentData?.platform === 'macOS';
+const MOD_LABEL = IS_MAC ? '⌘' : 'Ctrl+';
 const PREFS_KEY = 'jotted:prefs';
 
 export function mountEditor(root, store, jot) {
@@ -29,16 +32,24 @@ export function mountEditor(root, store, jot) {
       </header>
       <footer class="hud bottom">
         <div class="toolbar">
-          <div class="swatches" role="radiogroup" aria-label="Pen color"></div>
+          <div class="group colors">
+            <button class="btn icon pick pick-color" title="Color" aria-haspopup="true" aria-expanded="false"><span class="dot"></span></button>
+            <div class="swatches popover" role="radiogroup" aria-label="Pen color"></div>
+          </div>
           <span class="divider"></span>
-          <div class="sizes" role="radiogroup" aria-label="Pen size"></div>
+          <div class="group tools">
+            <button class="btn icon pick pick-size" title="Pen size" aria-haspopup="true" aria-expanded="false"><span class="dot"></span></button>
+            <div class="sizes popover" role="radiogroup" aria-label="Pen size"></div>
+            <span class="divider"></span>
+            <button class="btn icon undo" title="Undo (${MOD_LABEL}Z)" aria-label="Undo">↶</button>
+            <button class="btn icon redo" title="Redo (Shift+${MOD_LABEL}Z)" aria-label="Redo">↷</button>
+          </div>
           <span class="divider"></span>
-          <button class="btn icon undo" title="Undo (Ctrl+Z)" aria-label="Undo">↶</button>
-          <button class="btn icon redo" title="Redo (Shift+Ctrl+Z)" aria-label="Redo">↷</button>
-          <span class="divider"></span>
-          <button class="btn paper-btn" title="Paper: none / grid / lines / dots (G)"></button>
-          <span class="divider"></span>
-          <button class="btn clear" title="Clear this jot (Delete)">Clear</button>
+          <div class="group actions">
+            <button class="btn paper-btn" title="Paper: none / grid / lines / dots (G)"></button>
+            <span class="divider"></span>
+            <button class="btn clear" title="Clear this jot (Delete)">Clear</button>
+          </div>
         </div>
       </footer>
       <div class="toast" aria-live="polite"></div>
@@ -58,6 +69,8 @@ export function mountEditor(root, store, jot) {
   const clearBtn = el.querySelector('.clear');
   const paperBtn = el.querySelector('.paper-btn');
   const toast = el.querySelector('.toast');
+  const pickColor = el.querySelector('.pick-color');
+  const pickSize = el.querySelector('.pick-size');
   const swatches = el.querySelector('.swatches');
   const sizes = el.querySelector('.sizes');
 
@@ -94,13 +107,34 @@ export function mountEditor(root, store, jot) {
   function setColor(hex) {
     color = hex;
     for (const b of swatches.children) b.setAttribute('aria-checked', String(b.dataset.hex === hex));
+    pickColor.querySelector('.dot').style.background = hex;
+    closePopovers();
     savePrefs();
   }
   function setSize(key) {
     sizeKey = key;
     for (const b of sizes.children) b.setAttribute('aria-checked', String(b.dataset.size === key));
+    pickSize.querySelector('.dot').style.setProperty('--d', `${PEN_SIZES[key] * 2}px`);
+    closePopovers();
     savePrefs();
   }
+
+  // Narrow-screen popovers: the color and size pickers collapse into one
+  // button each and expand upward on tap.
+  function togglePopover(group) {
+    const open = !group.classList.contains('open');
+    closePopovers();
+    group.classList.toggle('open', open);
+    group.querySelector('.pick').setAttribute('aria-expanded', String(open));
+  }
+  function closePopovers() {
+    for (const g of el.querySelectorAll('.group.open')) {
+      g.classList.remove('open');
+      g.querySelector('.pick').setAttribute('aria-expanded', 'false');
+    }
+  }
+  pickColor.addEventListener('click', () => togglePopover(pickColor.parentElement));
+  pickSize.addEventListener('click', () => togglePopover(pickSize.parentElement));
   const PAPER_LABELS = { none: 'Plain', grid: 'Grid', lines: 'Lines', dots: 'Dots' };
   function setPaper(mode) {
     jot.paper = PAPER_MODES.includes(mode) ? mode : 'none';
@@ -334,10 +368,16 @@ export function mountEditor(root, store, jot) {
   }
 
   function onPointerDown(e) {
+    closePopovers();
     if (e.pointerType === 'touch') {
-      if (current) return; // palm while writing with a pen
+      if (current && current.pointerType === 'pen') return; // palm while writing with a pen
       touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
       capture(e.pointerId);
+      if (touches.size === 1 && !current && !mousePan) {
+        beginStroke(e); // one finger draws
+      } else if (current && current.pointerType === 'touch') {
+        endStroke(e, true); // second finger: this is a pinch, not a stroke
+      }
       return;
     }
     if (current || mousePan) return;
@@ -368,9 +408,7 @@ export function mountEditor(root, store, jot) {
     if (e.pointerType === 'touch' && touches.has(e.pointerId)) {
       const prev = touches.get(e.pointerId);
       const pts = [...touches.values()];
-      if (pts.length === 1) {
-        view.panBy(e.clientX - prev.x, e.clientY - prev.y);
-      } else if (pts.length >= 2) {
+      if (pts.length >= 2) {
         const other = [...touches.entries()].find(([id]) => id !== e.pointerId)[1];
         const c0 = [(prev.x + other.x) / 2, (prev.y + other.y) / 2];
         const d0 = Math.hypot(prev.x - other.x, prev.y - other.y) || 1;
@@ -386,6 +424,7 @@ export function mountEditor(root, store, jot) {
   }
 
   function onPointerUp(e) {
+    touches.delete(e.pointerId);
     if (current && e.pointerId === current.pointerId) {
       endStroke(e, e.type === 'pointercancel');
       return;
@@ -393,9 +432,7 @@ export function mountEditor(root, store, jot) {
     if (mousePan && e.pointerId === mousePan.pointerId) {
       mousePan = null;
       el.classList.remove('panning');
-      return;
     }
-    touches.delete(e.pointerId);
   }
 
   function onWheel(e) {
@@ -412,7 +449,7 @@ export function mountEditor(root, store, jot) {
 
   function onKeyDown(e) {
     if (e.target instanceof HTMLInputElement) return;
-    const mod = e.metaKey || e.ctrlKey;
+    const mod = IS_MAC ? e.metaKey : e.ctrlKey;
     if (mod && e.key.toLowerCase() === 'z') {
       e.preventDefault();
       e.shiftKey ? redo() : undo();

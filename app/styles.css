@@ -110,6 +110,7 @@ html, body {
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
 }
 .divider { width: 1px; height: 22px; background: var(--panel-border); margin: 0 4px; }
+.group { display: flex; align-items: center; gap: 6px; }
 .swatches, .sizes { display: flex; gap: 6px; }
 
 .swatch {
@@ -167,6 +168,57 @@ html, body {
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 .electron.platform-darwin .toast { top: 52px; }
+
+.pick { display: none; position: relative; }
+.pick .dot {
+  display: block;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 2px #000 inset;
+}
+.pick-size .dot { width: var(--d, 8px); height: var(--d, 8px); background: var(--fg); box-shadow: none; }
+
+/* Narrow screens (phones, anything under an iPad mini): the toolbar spans
+   the viewport in a single row; color and size become popover pickers. */
+@media (max-width: 743px) {
+  .hud.bottom { padding: 0; }
+  .toolbar {
+    width: 100%;
+    justify-content: space-between;
+    border-radius: 0;
+    border-left: 0;
+    border-right: 0;
+    border-bottom: 0;
+    padding: 8px 10px max(8px, env(safe-area-inset-bottom));
+    gap: 6px;
+  }
+  .toolbar > .divider, .group .divider { display: none; }
+  .group { position: relative; gap: 6px; }
+  .pick { display: grid; place-items: center; width: 44px; height: 44px; }
+  .popover {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 10px);
+    left: 0;
+    padding: 10px;
+    gap: 10px;
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 14px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+  .group.open > .popover { display: flex; }
+  .swatch { width: 38px; height: 38px; }
+  .size { width: 42px; height: 42px; }
+  .btn.icon { width: 44px; height: 44px; font-size: 20px; }
+  .btn.clear, .btn.paper-btn { font-size: 14px; padding: 10px 12px; min-width: 0; }
+  .hud.top { gap: 6px; }
+  .zoom { min-width: 48px; }
+}
 
 /* ---- Home ------------------------------------------------------------ */
 .home {
