@@ -34,8 +34,24 @@ nav {
 }
 nav .brand img { height: 26px; display: block; }
 
-.hero { padding: 120px 0 72px; text-align: center; }
-.top { position: relative; z-index: 1; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45); }
+.hero { padding: 120px 0 56px; text-align: center; }
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--bg);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+}
+.topbar .wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+.topbar .brand img { height: 26px; display: block; }
+.topbar .cta { margin: 0; justify-content: flex-end; }
 .light {
   background: #fff;
   color: #111;
