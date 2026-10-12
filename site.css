@@ -34,25 +34,21 @@ nav {
 }
 nav .brand img { height: 26px; display: block; }
 
-.hero { padding: 120px 0 56px; text-align: center; }
-.topbar {
+.hero { padding: 72px 0 48px; text-align: center; }
+.top {
   position: sticky;
   top: 0;
   z-index: 5;
   background: var(--bg);
+  background-image:
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-position: center top;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
 }
-.topbar .wrap {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding-top: 12px;
-  padding-bottom: 12px;
-}
-.topbar .brand img { height: 26px; display: block; }
-.topbar .cta { margin: 0; justify-content: flex-end; }
 .light {
+  position: relative;
   background: #fff;
   color: #111;
   --fg: #111;
