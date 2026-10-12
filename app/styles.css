@@ -79,7 +79,25 @@ html, body {
 .editor[data-theme="light"] .save-state { color: #6a6a74; }
 .editor[data-theme="light"] .save-state.error { color: #c0392b; }
 .editor.erasing-mode .layer.live, .editor.erasing .layer.live { cursor: cell; }
-.btn.eraser[aria-pressed="true"] { border-color: var(--pink, #ff8ac2); color: #ff8ac2; }
+/* Eraser swatch and the mobile color button while erasing: a white disc
+   with a red diagonal. */
+.eraser-swatch, .pick.erase .dot {
+  background: #fff;
+  position: relative;
+  overflow: hidden;
+}
+.eraser-swatch::after, .pick.erase .dot::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -15%;
+  width: 3px;
+  height: 130%;
+  background: #e5484d;
+  transform: translateX(-50%) rotate(45deg);
+  border-radius: 2px;
+}
+.pick.erase .dot { box-shadow: none; }
 .theme-btn { font-size: 16px; }
 .export-wrap { position: relative; }
 .export-menu {
@@ -196,7 +214,7 @@ html, body {
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 .electron.platform-darwin .toast { top: 52px; }
 
-.pick { display: none; position: relative; }
+.btn.icon.pick { display: none; position: relative; }
 .pick .dot {
   display: block;
   width: 22px;
@@ -223,7 +241,7 @@ html, body {
   }
   .toolbar > .divider, .group .divider { display: none; }
   .group { position: relative; gap: 6px; }
-  .pick { display: grid; place-items: center; width: 44px; height: 44px; }
+  .btn.icon.pick { display: grid; place-items: center; width: 44px; height: 44px; }
   .popover {
     display: none;
     position: absolute;

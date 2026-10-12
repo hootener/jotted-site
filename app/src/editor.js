@@ -44,8 +44,6 @@ export function mountEditor(root, store, jot) {
             <button class="btn icon pick pick-size" title="Pen size" aria-haspopup="true" aria-expanded="false"><span class="dot"></span></button>
             <div class="sizes popover" role="radiogroup" aria-label="Pen size"></div>
             <span class="divider"></span>
-            <button class="btn icon eraser" title="Eraser: tap or drag over strokes (E, or hold Alt)" aria-label="Eraser" aria-pressed="false">◌</button>
-            <span class="divider"></span>
             <button class="btn icon undo" title="Undo (${MOD_LABEL}Z)" aria-label="Undo">↶</button>
             <button class="btn icon redo" title="Redo (Shift+${MOD_LABEL}Z)" aria-label="Redo">↷</button>
           </div>
@@ -84,7 +82,6 @@ export function mountEditor(root, store, jot) {
   const toast = el.querySelector('.toast');
   const pickColor = el.querySelector('.pick-color');
   const pickSize = el.querySelector('.pick-size');
-  const eraserBtn = el.querySelector('.eraser');
   const themeBtn = el.querySelector('.theme-btn');
   const exportBtn = el.querySelector('.export-btn');
   const exportWrap = el.querySelector('.export-wrap');
@@ -101,6 +98,16 @@ export function mountEditor(root, store, jot) {
     b.addEventListener('click', () => setColor(c.hex));
     swatches.append(b);
   });
+  const eraserSwatch = document.createElement('button');
+  eraserSwatch.className = 'swatch eraser-swatch';
+  eraserSwatch.title = 'Eraser: tap or drag over strokes (E; or hold right-click or Alt)';
+  eraserSwatch.setAttribute('role', 'radio');
+  eraserSwatch.setAttribute('aria-label', 'Eraser');
+  eraserSwatch.addEventListener('click', () => {
+    setTool('eraser');
+    closePopovers();
+  });
+  swatches.append(eraserSwatch);
   for (const key of Object.keys(PEN_SIZES)) {
     const b = document.createElement('button');
     b.className = 'size';
@@ -111,7 +118,6 @@ export function mountEditor(root, store, jot) {
     b.addEventListener('click', () => setSize(key));
     sizes.append(b);
   }
-  eraserBtn.addEventListener('click', () => setTool(tool === 'eraser' ? 'pen' : 'eraser'));
   themeBtn.addEventListener('click', () => setTheme(jot.theme === 'light' ? 'dark' : 'light'));
   exportBtn.addEventListener('click', () => togglePopover(exportWrap));
   for (const b of el.querySelectorAll('.export-menu button')) {
@@ -129,15 +135,20 @@ export function mountEditor(root, store, jot) {
   let tool = 'pen'; // 'pen' | 'eraser'
   function setTool(next) {
     tool = next;
-    el.classList.toggle('erasing-mode', tool === 'eraser');
-    eraserBtn.setAttribute('aria-pressed', String(tool === 'eraser'));
+    const erasing = tool === 'eraser';
+    el.classList.toggle('erasing-mode', erasing);
+    eraserSwatch.setAttribute('aria-checked', String(erasing));
+    for (const b of swatches.querySelectorAll('.swatch:not(.eraser-swatch)')) {
+      b.setAttribute('aria-checked', String(!erasing && b.dataset.hex === color));
+    }
+    pickColor.classList.toggle('erase', erasing);
   }
 
   function applyTheme() {
     const theme = jot.theme ?? 'dark';
     el.dataset.theme = theme;
     themeBtn.textContent = theme === 'light' ? '☾' : '☀';
-    for (const b of swatches.children) b.style.setProperty('--c', colorForTheme(b.dataset.hex, theme));
+    for (const b of swatches.querySelectorAll('.swatch:not(.eraser-swatch)')) b.style.setProperty('--c', colorForTheme(b.dataset.hex, theme));
     pickColor.querySelector('.dot').style.background = colorForTheme(color, theme);
   }
   function setTheme(theme) {
@@ -164,7 +175,8 @@ export function mountEditor(root, store, jot) {
 
   function setColor(hex) {
     color = hex;
-    for (const b of swatches.children) b.setAttribute('aria-checked', String(b.dataset.hex === hex));
+    setTool('pen');
+    for (const b of swatches.querySelectorAll('.swatch:not(.eraser-swatch)')) b.setAttribute('aria-checked', String(b.dataset.hex === hex));
     pickColor.querySelector('.dot').style.background = colorForTheme(hex, jot.theme);
     closePopovers();
     savePrefs();
@@ -457,8 +469,9 @@ export function mountEditor(root, store, jot) {
     // Stylus eraser end or barrel button.
     return e.pointerType === 'pen' && ((e.buttons & 32) !== 0 || e.button === 5);
   }
-  function beginErase(e) {
-    erasing = { pointerId: e.pointerId, items: [] };
+  function beginErase(e, temporary = false) {
+    erasing = { pointerId: e.pointerId, items: [], restoreTool: temporary ? tool : null };
+    if (temporary) setTool('eraser');
     capture(e.pointerId);
     el.classList.add('erasing');
     eraseAt(e);
@@ -481,6 +494,7 @@ export function mountEditor(root, store, jot) {
   }
   function endErase() {
     const items = erasing.items.sort((a, b) => a.index - b.index);
+    if (erasing.restoreTool) setTool(erasing.restoreTool);
     erasing = null;
     el.classList.remove('erasing');
     if (items.length) commit({ type: 'erase', items });
@@ -489,6 +503,12 @@ export function mountEditor(root, store, jot) {
   function onPointerDown(e) {
     closePopovers();
     if (erasing) return;
+    // Right mouse button held: erase while held, back to the pen on release.
+    if (e.pointerType === 'mouse' && e.button === 2 && !current && !mousePan) {
+      e.preventDefault();
+      beginErase(e, true);
+      return;
+    }
     if (e.pointerType !== 'touch' && !current && !mousePan && wantsErase(e)) {
       e.preventDefault();
       beginErase(e);
