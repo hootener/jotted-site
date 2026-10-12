@@ -149,6 +149,25 @@ html, body {
 .size:hover { background: rgba(255, 255, 255, 0.08); }
 .size[aria-checked="true"] { border-color: var(--accent); }
 
+.editor.ui-hidden .hud { display: none; }
+.toast {
+  position: absolute;
+  left: 50%;
+  top: 18px;
+  transform: translateX(-50%) translateY(-8px);
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  color: var(--fg);
+  font-size: 13px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms, transform 180ms;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.electron.platform-darwin .toast { top: 52px; }
+
 /* ---- Home ------------------------------------------------------------ */
 .home {
   max-width: 1100px;

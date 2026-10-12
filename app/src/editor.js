@@ -41,6 +41,7 @@ export function mountEditor(root, store, jot) {
           <button class="btn clear" title="Clear this jot (Delete)">Clear</button>
         </div>
       </footer>
+      <div class="toast" aria-live="polite"></div>
     </div>`;
 
   const el = root.firstElementChild;
@@ -56,6 +57,7 @@ export function mountEditor(root, store, jot) {
   const redoBtn = el.querySelector('.redo');
   const clearBtn = el.querySelector('.clear');
   const paperBtn = el.querySelector('.paper-btn');
+  const toast = el.querySelector('.toast');
   const swatches = el.querySelector('.swatches');
   const sizes = el.querySelector('.sizes');
 
@@ -111,6 +113,18 @@ export function mountEditor(root, store, jot) {
   function cyclePaper(dir) {
     const i = PAPER_MODES.indexOf(jot.paper);
     setPaper(PAPER_MODES[(i + dir + PAPER_MODES.length) % PAPER_MODES.length]);
+  }
+  // H hides every bit of UI (for screenshares); H again brings it back.
+  let toastTimer = 0;
+  function showToast(text) {
+    toast.textContent = text;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 1800);
+  }
+  function toggleUi() {
+    const hidden = el.classList.toggle('ui-hidden');
+    showToast(hidden ? 'Interface hidden. Press H to bring it back.' : 'Interface shown.');
   }
   function cycleColor(dir) {
     const i = PALETTE.findIndex((c) => c.hex === color);
@@ -414,6 +428,8 @@ export function mountEditor(root, store, jot) {
     } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
       e.preventDefault();
       cycleColor(e.key === 'ArrowRight' ? 1 : -1);
+    } else if (e.key.toLowerCase() === 'h' && !mod) {
+      toggleUi();
     } else if (e.key.toLowerCase() === 'g' && !mod) {
       cyclePaper(e.shiftKey ? -1 : 1);
     } else if (e.key === 'Delete' || e.key === 'Backspace') {
@@ -472,6 +488,7 @@ export function mountEditor(root, store, jot) {
   document.title = `Jotted · ${jot.id.slice(-6)}`;
 
   return function unmount() {
+    clearTimeout(toastTimer);
     if (saveTimer) saveNow();
     cancelAnimationFrame(frame);
     document.removeEventListener('gesturestart', preventDefault);
