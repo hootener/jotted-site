@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Download Jotted</title>
+  <link rel="icon" href="assets/icon.png">
+  <link rel="stylesheet" href="site.css">
+</head>
+<body>
+  <div class="wrap">
+    <nav>
+      <a class="brand" href="./"><img src="assets/wordmark.png" alt="jotted"></a>
+      <ul>
+        <li><a href="./">Home</a></li>
+        <li><a class="current" href="download.html">Download</a></li>
+        <li><a href="app/">Try it</a></li>
+      </ul>
+    </nav>
+
+    <section class="page-title">
+      <h1>Download</h1>
+      <p>Free for macOS, Windows and Linux. Or <a href="app/">use it in the browser</a> with no install.</p>
+    </section>
+
+    <p class="version" id="version">Loading latest version…</p>
+
+    <section class="downloads" id="downloads">
+      <article class="dl" data-platform="mac-arm64" data-file="Jotted-mac-arm64.dmg">
+        <h3>macOS <small>Apple Silicon</small></h3>
+        <a class="btn primary" href="https://github.com/hootener/jotted-site/releases/latest/download/Jotted-mac-arm64.dmg">Download .dmg</a>
+        <p class="note">M1 and later. Unsigned: right-click the app and choose Open the first time.</p>
+        <p class="hash"></p>
+      </article>
+      <article class="dl" data-platform="mac-x64" data-file="Jotted-mac-x64.dmg">
+        <h3>macOS <small>Intel</small></h3>
+        <a class="btn primary" href="https://github.com/hootener/jotted-site/releases/latest/download/Jotted-mac-x64.dmg">Download .dmg</a>
+        <p class="note">Unsigned: right-click the app and choose Open the first time.</p>
+        <p class="hash"></p>
+      </article>
+      <article class="dl" data-platform="win" data-file="Jotted-win-x64-setup.exe">
+        <h3>Windows <small>installer</small></h3>
+        <a class="btn primary" href="https://github.com/hootener/jotted-site/releases/latest/download/Jotted-win-x64-setup.exe">Download .exe</a>
+        <p class="note">64-bit. SmartScreen may warn: choose “More info”, then “Run anyway”.</p>
+        <p class="hash"></p>
+      </article>
+      <article class="dl" data-platform="win" data-file="Jotted-win-x64-portable.exe">
+        <h3>Windows <small>portable</small></h3>
+        <a class="btn" href="https://github.com/hootener/jotted-site/releases/latest/download/Jotted-win-x64-portable.exe">Download .exe</a>
+        <p class="note">Single file, no install. Keeps its data next to the exe.</p>
+        <p class="hash"></p>
+      </article>
+      <article class="dl" data-platform="linux" data-file="Jotted-linux-x86_64.AppImage">
+        <h3>Linux <small>AppImage</small></h3>
+        <a class="btn primary" href="https://github.com/hootener/jotted-site/releases/latest/download/Jotted-linux-x86_64.AppImage">Download .AppImage</a>
+        <p class="note">x86_64. Run <code>chmod +x</code> on it, then launch.</p>
+        <p class="hash"></p>
+      </article>
+    </section>
+
+    <p class="fine">
+      Checksums: <a href="https://github.com/hootener/jotted-site/releases/latest/download/checksums.md5">checksums.md5</a> ·
+      <a href="https://github.com/hootener/jotted-site/releases/latest/download/checksums.sha256">checksums.sha256</a> ·
+      <a href="https://github.com/hootener/jotted-site/releases">all releases</a>.
+      Verify with <code>md5sum -c checksums.md5</code> or <code>shasum -a 256 -c checksums.sha256</code>.
+      Desktop jots live in your user data folder as JSON; the browser version keeps them in localStorage.
+    </p>
+
+    <footer>Jotted is free and unsigned.</footer>
+  </div>
+
+  <script>
+    // latest.json is written by the release workflow next to this page.
+    (async () => {
+      const versionEl = document.getElementById('version');
+      try {
+        const r = await fetch('latest.json', { cache: 'no-cache' });
+        if (!r.ok) throw new Error(r.status);
+        const latest = await r.json();
+        const when = new Date(latest.publishedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+        versionEl.innerHTML = `Latest version <strong>${latest.version}</strong> · ${when} · <a href="${latest.releaseUrl}">release notes</a>`;
+        for (const card of document.querySelectorAll('.dl')) {
+          const f = latest.files.find((x) => x.name === card.dataset.file);
+          if (!f) continue;
+          const mb = (f.size / 1048576).toFixed(0);
+          card.querySelector('.hash').innerHTML = `${mb} MB · MD5 <b>${f.md5}</b> · SHA-256 <b>${f.sha256}</b>`;
+        }
+      } catch {
+        versionEl.innerHTML = 'Latest version: see the <a href="https://github.com/hootener/jotted-site/releases/latest">releases page</a>.';
+      }
+
+      // Highlight the download that matches this machine.
+      const ua = navigator.userAgent;
+      let key = null;
+      if (/Windows/.test(ua)) key = 'win';
+      else if (/Linux/.test(ua) && !/Android/.test(ua)) key = 'linux';
+      else if (/Mac/.test(ua)) key = 'mac-arm64'; // browsers hide the CPU; Apple Silicon is the safer default
+      const card = key && document.querySelector(`.dl[data-platform="${key}"]`);
+      if (card) {
+        card.classList.add('recommended');
+        card.querySelector('h3').insertAdjacentHTML('beforeend', '<span class="tag">for this computer</span>');
+        if (key === 'mac-arm64') card.querySelector('.note').textContent += ' Intel Mac? Use the build below.';
+      }
+    })();
+  </script>
+</body>
+</html>

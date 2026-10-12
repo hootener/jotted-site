@@ -1,0 +1,220 @@
+:root {
+  color-scheme: dark;
+  --bg: #000;
+  --panel: rgba(28, 28, 32, 0.85);
+  --panel-border: rgba(255, 255, 255, 0.1);
+  --fg: #e8e8ec;
+  --muted: #8a8a94;
+  --accent: #7fd4ff;
+  --danger: #ff6b7a;
+  --radius: 12px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  overscroll-behavior: none;
+}
+
+#app { height: 100%; }
+
+/* ---- Buttons --------------------------------------------------------- */
+.btn {
+  appearance: none;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  color: var(--fg);
+  font: inherit;
+  font-size: 14px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  text-decoration: none;
+  line-height: 1.2;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: background 120ms, border-color 120ms, opacity 120ms;
+}
+.btn:hover { background: rgba(60, 60, 68, 0.9); }
+.btn:disabled { opacity: 0.35; cursor: default; }
+.btn.ghost { background: transparent; border-color: transparent; }
+.btn.ghost:hover { background: rgba(255, 255, 255, 0.08); }
+.btn.primary { background: var(--accent); color: #000; border-color: transparent; font-weight: 600; }
+.btn.primary:hover { filter: brightness(1.1); }
+.btn.icon { width: 34px; height: 34px; padding: 0; font-size: 18px; display: grid; place-items: center; }
+.btn.danger { color: var(--danger); }
+.btn.clear, .btn.paper-btn { font-size: 13px; padding: 5px 10px; min-width: 56px; }
+.btn.paper-btn[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+
+/* ---- Editor ---------------------------------------------------------- */
+.editor {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.layer.live {
+  touch-action: none;
+  cursor: crosshair;
+}
+.editor.pan-ready .layer.live { cursor: grab; }
+.editor.panning .layer.live { cursor: grabbing; }
+
+.hud {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+  padding: max(10px, env(safe-area-inset-top)) 12px 12px;
+}
+.hud > * { pointer-events: auto; }
+.hud.top { top: 0; }
+.hud.bottom {
+  bottom: 0;
+  justify-content: center;
+  padding-bottom: max(14px, env(safe-area-inset-bottom));
+}
+.spacer { flex: 1; pointer-events: none; }
+.jot-id { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; letter-spacing: 0.04em; }
+.save-state { font-size: 12px; color: var(--muted); }
+.save-state.error { color: var(--danger); }
+.zoom { font-variant-numeric: tabular-nums; min-width: 60px; text-align: center; }
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 999px;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+.divider { width: 1px; height: 22px; background: var(--panel-border); margin: 0 4px; }
+.swatches, .sizes { display: flex; gap: 6px; }
+
+.swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  background: var(--c);
+  cursor: pointer;
+  padding: 0;
+  transition: transform 120ms, border-color 120ms;
+}
+.swatch:hover { transform: scale(1.1); }
+.swatch[aria-checked="true"] {
+  border-color: #fff;
+  box-shadow: 0 0 0 2px #000 inset;
+  transform: scale(1.12);
+}
+
+.size {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+.size span {
+  width: var(--d);
+  height: var(--d);
+  border-radius: 50%;
+  background: var(--fg);
+}
+.size:hover { background: rgba(255, 255, 255, 0.08); }
+.size[aria-checked="true"] { border-color: var(--accent); }
+
+/* ---- Home ------------------------------------------------------------ */
+.home {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 28px 20px 60px;
+}
+.home-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  line-height: 0;
+}
+.brand-wordmark { height: 28px; width: auto; }
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 18px;
+}
+.empty {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  text-align: center;
+  padding: 80px 20px;
+  line-height: 1.6;
+}
+.card {
+  background: #111115;
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: border-color 120ms, transform 120ms;
+}
+.card:hover { border-color: rgba(255, 255, 255, 0.25); transform: translateY(-2px); }
+.thumb { display: block; line-height: 0; }
+.thumb canvas { width: 100%; height: auto; display: block; }
+.meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 8px 10px 14px;
+  border-top: 1px solid var(--panel-border);
+}
+.meta-text { display: flex; flex-direction: column; gap: 2px; }
+.when { font-size: 14px; }
+.count { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.delete { font-size: 13px; color: var(--muted); }
+.delete:hover { color: var(--fg); }
+
+/* ---- Electron ---------------------------------------------------------- */
+/* macOS uses a hidden-inset title bar. A full-width strip at the top is the
+   window drag handle; everything else sits below it. */
+.electron.platform-darwin .titlebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 44px;
+  z-index: 10;
+  -webkit-app-region: drag;
+}
+.electron.platform-darwin .hud.top { top: 44px; padding-top: 0; }
+.electron.platform-darwin .home { padding-top: 56px; }
