@@ -34,8 +34,8 @@ nav {
 }
 nav .brand img { height: 26px; display: block; }
 
-.hero { padding: 120px 0 24px; text-align: center; }
-.fade { height: 50px; background: linear-gradient(to bottom, rgba(255, 255, 255, 0), #fff); }
+.hero { padding: 120px 0 72px; text-align: center; }
+.top { position: relative; z-index: 1; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45); }
 .light {
   background: #fff;
   color: #111;
@@ -68,7 +68,7 @@ nav .brand img { height: 26px; display: block; }
 .btn.primary:hover { filter: brightness(1.08); }
 
 .rows { margin: 0; }
-.row:first-child { border-top: 0; padding-top: 8px; }
+.row:first-child { border-top: 0; padding-top: 56px; }
 .row {
   display: grid;
   grid-template-columns: 1fr 1fr;
