@@ -34,7 +34,16 @@ nav {
 }
 nav .brand img { height: 26px; display: block; }
 
-.hero { padding: 120px 0 40px; text-align: center; }
+.hero { padding: 120px 0 24px; text-align: center; }
+.fade { height: 200px; background: linear-gradient(to bottom, rgba(255, 255, 255, 0), #fff); }
+.light {
+  background: #fff;
+  color: #111;
+  --fg: #111;
+  --muted: #5a5a64;
+  --line: rgba(0, 0, 0, 0.1);
+  padding-bottom: 96px;
+}
 .hero img.icon { width: 112px; height: 112px; border-radius: 26px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 0 1px var(--line); }
 .hero img.wordmark { height: 84px; margin: 0 0 14px; }
 .hero h1 { font-size: 30px; font-weight: 600; margin: 0; color: var(--fg); letter-spacing: -0.01em; }
@@ -58,7 +67,8 @@ nav .brand img { height: 26px; display: block; }
 .btn.primary { background: var(--accent); color: #000; border-color: transparent; }
 .btn.primary:hover { filter: brightness(1.08); }
 
-.rows { margin: 72px 0 48px; }
+.rows { margin: 0; }
+.row:first-child { border-top: 0; padding-top: 8px; }
 .row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -69,8 +79,9 @@ nav .brand img { height: 26px; display: block; }
 }
 .row:nth-child(even) .art { order: 2; }
 .art {
-  background: rgba(11, 11, 14, 0.92);
-  border: 1px solid var(--line);
+  background: #0b0b0e;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
   border-radius: 18px;
   aspect-ratio: 4 / 3;
   overflow: hidden;
@@ -78,14 +89,14 @@ nav .brand img { height: 26px; display: block; }
 .art svg { width: 100%; height: 100%; display: block; }
 .text h3 { margin: 0 0 12px; font-size: 28px; font-weight: 600; letter-spacing: -0.01em; }
 .text p { margin: 0; color: var(--muted); font-size: 17px; line-height: 1.6; }
-.text kbd, .keys kbd {
+.text kbd {
   font-family: inherit;
-  background: rgba(28, 28, 32, 0.9);
-  border: 1px solid var(--line);
+  background: #f1f1f4;
+  border: 1px solid rgba(0, 0, 0, 0.15);
   border-radius: 6px;
   padding: 2px 7px;
   font-size: 0.85em;
-  color: var(--fg);
+  color: #111;
 }
 @media (max-width: 720px) {
   .row { grid-template-columns: 1fr; gap: 24px; padding: 36px 0; }
@@ -93,7 +104,6 @@ nav .brand img { height: 26px; display: block; }
   .text h3 { font-size: 24px; }
 }
 
-.keys { color: var(--muted); font-size: 14px; text-align: center; margin-bottom: 96px; line-height: 2; }
 
 footer { color: var(--muted); font-size: 13px; text-align: center; padding: 24px 0 40px; }
 

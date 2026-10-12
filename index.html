@@ -9,7 +9,8 @@
   <link rel="stylesheet" href="site.css">
 </head>
 <body>
-  <div class="wrap">
+  <header class="top">
+    <div class="wrap">
     <section class="hero">
       <img class="wordmark" src="assets/wordmark.png" alt="jotted">
       <h1>Handwritten notes. None of the bloat.</h1>
@@ -18,7 +19,11 @@
         <a class="btn" href="app/">Try it in the browser</a>
       </div>
     </section>
-
+    </div>
+  </header>
+  <div class="fade" aria-hidden="true"></div>
+  <main class="light">
+    <div class="wrap">
     <section class="rows">
 
       <article class="row">
@@ -131,11 +136,7 @@
       </article>
 
     </section>
-
-    <p class="keys">
-      <kbd>H</kbd> hide everything &nbsp; <kbd>1</kbd>–<kbd>6</kbd> colors &nbsp; <kbd>↑</kbd><kbd>↓</kbd> pen weight &nbsp;
-      <kbd>G</kbd> paper &nbsp; <kbd>Delete</kbd> clear &nbsp; <kbd>⌘Z</kbd> undo &nbsp; <kbd>Space</kbd>+drag pan
-    </p>
-  </div>
+    </div>
+  </main>
 </body>
 </html>
