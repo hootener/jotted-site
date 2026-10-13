@@ -1,7 +1,7 @@
-import { createStore } from './store.js?v=4314a9ac34';
-import { isUlid } from './ulid.js?v=4314a9ac34';
-import { mountEditor } from './editor.js?v=4314a9ac34';
-import { mountList } from './list.js?v=4314a9ac34';
+import { createStore } from './store.js?v=c12a0ee880';
+import { isUlid } from './ulid.js?v=c12a0ee880';
+import { mountEditor } from './editor.js?v=c12a0ee880';
+import { mountList } from './list.js?v=c12a0ee880';
 
 const root = document.getElementById('app');
 if (globalThis.jotted) {
@@ -42,6 +42,23 @@ async function route() {
 
 window.addEventListener('hashchange', route);
 route();
+
+// Desktop auto-update banner (no-op in the browser build).
+globalThis.jotted?.onUpdate?.(({ state, version }) => {
+  let bar = document.querySelector('.update-banner');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.className = 'update-banner';
+    document.body.append(bar);
+  }
+  if (state === 'downloaded') {
+    bar.innerHTML = `Jotted ${version} is ready. <button class="btn primary">Restart to update</button> <button class="btn ghost dismiss">Later</button>`;
+    bar.querySelector('.primary').addEventListener('click', () => globalThis.jotted.installUpdate());
+  } else {
+    bar.innerHTML = `Jotted ${version} is available. <a class="btn primary" href="https://hootener.github.io/jotted-site/download.html" target="_blank" rel="noopener">Download</a> <button class="btn ghost dismiss">Later</button>`;
+  }
+  bar.querySelector('.dismiss').addEventListener('click', () => bar.remove());
+});
 
 // Desktop menu actions (no-op in the browser build).
 globalThis.jotted?.onMenu?.(async (action) => {

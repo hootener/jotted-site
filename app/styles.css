@@ -329,6 +329,23 @@ html, body {
   .zoom { min-width: 48px; }
 }
 
+.update-banner {
+  position: fixed;
+  right: 16px;
+  bottom: 88px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px 10px 16px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+  font-size: 14px;
+  color: var(--fg);
+}
+
 /* ---- Home ------------------------------------------------------------ */
 .home {
   max-width: 1100px;
