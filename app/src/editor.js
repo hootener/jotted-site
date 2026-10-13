@@ -1,10 +1,10 @@
 // Jot editor: full-screen pen canvas with pan/zoom, undo, autosave.
-import { View, fitCanvas, beginFrame, drawStrokes, drawStroke, drawImages, drawPaper, createImageCache, PAPER_MODES } from './canvas.js?v=b64673d616';
-import { fitPlacement, pointInImage, imageId, blobToImageData } from './images.js?v=b64673d616';
-import { createSmoother, simulatePressure, hitTestStroke, PEN_SIZES } from './stroke.js?v=b64673d616';
-import { PALETTE, colorForTheme } from './palette.js?v=b64673d616';
-import { jotToSVG, jotToPNG, downloadBlob } from './export.js?v=b64673d616';
-import { cleanName, defaultName } from './names.js?v=b64673d616';
+import { View, fitCanvas, beginFrame, drawStrokes, drawStroke, drawImages, drawPaper, createImageCache, PAPER_MODES } from './canvas.js?v=a5099f02f4';
+import { fitPlacement, pointInImage, imageId, blobToImageData } from './images.js?v=a5099f02f4';
+import { createSmoother, simulatePressure, hitTestStroke, PEN_SIZES } from './stroke.js?v=a5099f02f4';
+import { PALETTE, colorForTheme } from './palette.js?v=a5099f02f4';
+import { jotToSVG, jotToPNG, downloadBlob } from './export.js?v=a5099f02f4';
+import { cleanName, defaultName } from './names.js?v=a5099f02f4';
 
 const SAVE_DELAY_MS = 400;
 // Platform convention: Cmd on macOS, Ctrl elsewhere.
@@ -284,7 +284,7 @@ export function mountEditor(root, store, jot) {
       try {
         if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) {
           showToast('Rendering PDF…');
-          const { renderPdfPages, MAX_PAGES } = await import('./pdf.js?v=b64673d616');
+          const { renderPdfPages, MAX_PAGES } = await import('./pdf.js?v=a5099f02f4');
           const { pages, total } = await renderPdfPages(file, (i, n) => showToast(`Rendering page ${i} of ${n}…`));
           if (pages.length) placeStack(pages);
           showToast(total > MAX_PAGES ? `Added first ${MAX_PAGES} of ${total} pages` : `Added ${pages.length} page${pages.length === 1 ? '' : 's'}`);

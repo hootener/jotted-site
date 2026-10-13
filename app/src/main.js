@@ -1,8 +1,8 @@
-import { createStore } from './store.js?v=b64673d616';
-import { isUlid } from './ulid.js?v=b64673d616';
-import { mountEditor } from './editor.js?v=b64673d616';
-import { mountList } from './list.js?v=b64673d616';
-import { fitPlacement, imageId } from './images.js?v=b64673d616';
+import { createStore } from './store.js?v=a5099f02f4';
+import { isUlid } from './ulid.js?v=a5099f02f4';
+import { mountEditor } from './editor.js?v=a5099f02f4';
+import { mountList } from './list.js?v=a5099f02f4';
+import { fitPlacement, imageId } from './images.js?v=a5099f02f4';
 
 const root = document.getElementById('app');
 if (globalThis.jotted) {
@@ -56,7 +56,7 @@ globalThis.jotted?.onUpdate?.(({ state, version }) => {
     bar.innerHTML = `Jotted ${version} is ready. <button class="btn primary">Restart to update</button> <button class="btn ghost dismiss">Later</button>`;
     bar.querySelector('.primary').addEventListener('click', () => globalThis.jotted.installUpdate());
   } else {
-    bar.innerHTML = `Jotted ${version} is available. <a class="btn primary" href="https://hootener.github.io/jotted-site/download.html" target="_blank" rel="noopener">Download</a> <button class="btn ghost dismiss">Later</button>`;
+    bar.innerHTML = `Jotted ${version} is available. <a class="btn primary" href="https://jotted.ink/download.html" target="_blank" rel="noopener">Download</a> <button class="btn ghost dismiss">Later</button>`;
   }
   bar.querySelector('.dismiss').addEventListener('click', () => bar.remove());
 });
