@@ -1,7 +1,7 @@
 // View transform and canvas rendering helpers.
-import { strokeOutline, strokeBounds, outlineOptions, HIGHLIGHT_ALPHA } from './stroke.js?v=7691a2dfd1';
-import { colorForTheme, THEMES } from './palette.js?v=7691a2dfd1';
-import { imageBounds, loadImage } from './images.js?v=7691a2dfd1';
+import { strokeOutline, strokeBounds, outlineOptions, HIGHLIGHT_ALPHA } from './stroke.js?v=b64673d616';
+import { colorForTheme, THEMES } from './palette.js?v=b64673d616';
+import { imageBounds, loadImage } from './images.js?v=b64673d616';
 
 export const MIN_SCALE = 0.1;
 export const MAX_SCALE = 16;

@@ -4,15 +4,18 @@
 //   loadJot(id) -> Promise<jot | null>
 //   saveJot(jot) -> Promise<jot>
 //   deleteJot(id) -> Promise<void>
-import { ulid } from './ulid.js?v=7691a2dfd1';
+import { ulid } from './ulid.js?v=b64673d616';
+import { defaultName } from './names.js?v=b64673d616';
 
 const INDEX_KEY = 'jotted:index';
 const JOT_PREFIX = 'jotted:jot:';
 
 export function newJot(now = Date.now) {
   const t = now();
+  const id = ulid(t);
   return {
-    id: ulid(t),
+    id,
+    name: defaultName(id),
     createdAt: t,
     updatedAt: t,
     view: { x: 0, y: 0, scale: 1 },
@@ -30,6 +33,7 @@ export function normalizeJot(jot, id) {
   jot.paper ??= 'none';
   jot.theme ??= 'dark';
   jot.images ??= [];
+  if (!jot.name) jot.name = defaultName(jot.id);
   return jot;
 }
 
@@ -40,7 +44,7 @@ export function normalizeJot(jot, id) {
 export async function createStore() {
   if (globalThis.jotted?.jots) return createBridgeStore(globalThis.jotted.jots);
   if (globalThis.indexedDB) {
-    const { createIndexedDBStore } = await import('./idbStore.js?v=7691a2dfd1');
+    const { createIndexedDBStore } = await import('./idbStore.js?v=b64673d616');
     return createIndexedDBStore(globalThis.localStorage);
   }
   return createLocalStorageStore(globalThis.localStorage);
@@ -99,6 +103,7 @@ export function createLocalStorageStore(storage, now = Date.now) {
       storage.setItem(JOT_PREFIX + jot.id, JSON.stringify(jot));
       const entry = {
         id: jot.id,
+        name: jot.name,
         createdAt: jot.createdAt,
         updatedAt: jot.updatedAt,
         strokeCount: jot.strokes.length,

@@ -1,5 +1,5 @@
 // Home page: list of saved jots.
-import { renderThumbnail, createImageCache } from './canvas.js?v=7691a2dfd1';
+import { renderThumbnail, createImageCache } from './canvas.js?v=b64673d616';
 
 export function mountList(root, store, jots) {
   root.innerHTML = `
@@ -50,8 +50,8 @@ export function mountList(root, store, jots) {
       <a class="thumb" href="#/${jot.id}" aria-label="Open jot ${jot.id}"></a>
       <div class="meta">
         <div class="meta-text">
-          <span class="when">${formatDate(jot.updatedAt)}</span>
-          <span class="count">${jot.strokes.length} stroke${jot.strokes.length === 1 ? '' : 's'} · ${jot.id.slice(-6)}</span>
+          <span class="name">${escapeHtml(jot.name)}</span>
+          <span class="count">${formatDate(jot.updatedAt)} · ${jot.strokes.length} stroke${jot.strokes.length === 1 ? '' : 's'}</span>
         </div>
         <button class="btn ghost delete" title="Delete jot">Delete</button>
       </div>`;
@@ -78,6 +78,10 @@ export function mountList(root, store, jots) {
       }, 3000);
     });
   }
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
 function formatDate(ts) {

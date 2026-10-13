@@ -194,7 +194,22 @@ html, body {
   padding-bottom: max(14px, env(safe-area-inset-bottom));
 }
 .spacer { flex: 1; pointer-events: none; }
-.jot-id { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; letter-spacing: 0.04em; }
+.jot-name {
+  font: inherit;
+  font-size: 14px;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 4px 8px;
+  min-width: 6ch;
+  max-width: 40ch;
+  outline: none;
+}
+.jot-name:hover { border-color: var(--panel-border); color: var(--fg); }
+.jot-name:focus { border-color: var(--accent); color: var(--fg); background: rgba(0, 0, 0, 0.4); }
+.editor[data-theme="light"] .jot-name:focus { background: rgba(255, 255, 255, 0.8); color: #111; }
+.editor[data-theme="light"] .jot-name:hover { color: #111; }
 .save-state { font-size: 12px; color: var(--muted); }
 .save-state.error { color: var(--danger); }
 .zoom { font-variant-numeric: tabular-nums; min-width: 60px; text-align: center; }
@@ -396,7 +411,7 @@ html, body {
   border-top: 1px solid var(--panel-border);
 }
 .meta-text { display: flex; flex-direction: column; gap: 2px; }
-.when { font-size: 14px; }
+.name { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 160px; }
 .count { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .delete { font-size: 13px; color: var(--muted); }
 .delete:hover { color: var(--fg); }

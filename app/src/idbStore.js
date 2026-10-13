@@ -1,6 +1,6 @@
 // IndexedDB-backed jot store for the browser build. Same interface as the
 // other stores. Migrates anything found in localStorage on first open.
-import { newJot, normalizeJot } from './store.js?v=7691a2dfd1';
+import { newJot, normalizeJot } from './store.js?v=b64673d616';
 
 const DB_NAME = 'jotted';
 const DB_VERSION = 1;
@@ -31,7 +31,7 @@ function tx(db, stores, mode, fn) {
 }
 
 function metaOf(jot) {
-  return { id: jot.id, createdAt: jot.createdAt, updatedAt: jot.updatedAt, strokeCount: jot.strokes.length };
+  return { id: jot.id, name: jot.name, createdAt: jot.createdAt, updatedAt: jot.updatedAt, strokeCount: jot.strokes.length };
 }
 
 export function createIndexedDBStore(storage = globalThis.localStorage, now = Date.now) {

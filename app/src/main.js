@@ -1,8 +1,8 @@
-import { createStore } from './store.js?v=7691a2dfd1';
-import { isUlid } from './ulid.js?v=7691a2dfd1';
-import { mountEditor } from './editor.js?v=7691a2dfd1';
-import { mountList } from './list.js?v=7691a2dfd1';
-import { fitPlacement, imageId } from './images.js?v=7691a2dfd1';
+import { createStore } from './store.js?v=b64673d616';
+import { isUlid } from './ulid.js?v=b64673d616';
+import { mountEditor } from './editor.js?v=b64673d616';
+import { mountList } from './list.js?v=b64673d616';
+import { fitPlacement, imageId } from './images.js?v=b64673d616';
 
 const root = document.getElementById('app');
 if (globalThis.jotted) {

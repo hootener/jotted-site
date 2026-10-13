@@ -1,9 +1,10 @@
 // Jot editor: full-screen pen canvas with pan/zoom, undo, autosave.
-import { View, fitCanvas, beginFrame, drawStrokes, drawStroke, drawImages, drawPaper, createImageCache, PAPER_MODES } from './canvas.js?v=7691a2dfd1';
-import { fitPlacement, pointInImage, imageId, blobToImageData } from './images.js?v=7691a2dfd1';
-import { createSmoother, simulatePressure, hitTestStroke, PEN_SIZES } from './stroke.js?v=7691a2dfd1';
-import { PALETTE, colorForTheme } from './palette.js?v=7691a2dfd1';
-import { jotToSVG, jotToPNG, downloadBlob } from './export.js?v=7691a2dfd1';
+import { View, fitCanvas, beginFrame, drawStrokes, drawStroke, drawImages, drawPaper, createImageCache, PAPER_MODES } from './canvas.js?v=b64673d616';
+import { fitPlacement, pointInImage, imageId, blobToImageData } from './images.js?v=b64673d616';
+import { createSmoother, simulatePressure, hitTestStroke, PEN_SIZES } from './stroke.js?v=b64673d616';
+import { PALETTE, colorForTheme } from './palette.js?v=b64673d616';
+import { jotToSVG, jotToPNG, downloadBlob } from './export.js?v=b64673d616';
+import { cleanName, defaultName } from './names.js?v=b64673d616';
 
 const SAVE_DELAY_MS = 400;
 // Platform convention: Cmd on macOS, Ctrl elsewhere.
@@ -31,7 +32,7 @@ export function mountEditor(root, store, jot) {
       <canvas class="layer live"></canvas>
       <header class="hud top">
         <a class="btn ghost" href="#/" title="All jots (Esc)">‹ Jots</a>
-        <span class="jot-id" title="${jot.id}">${jot.id.slice(-6)}</span>
+        <input class="jot-name" type="text" value="" title="Jot name (click to rename)" aria-label="Jot name" spellcheck="false" maxlength="80">
         <span class="spacer"></span>
         <span class="save-state" aria-live="polite"></span>
         <button class="btn ghost zoom" title="Reset view (0)">100%</button>
@@ -110,6 +111,7 @@ export function mountEditor(root, store, jot) {
   const clearBtn = el.querySelector('.clear');
   const paperBtn = el.querySelector('.paper-btn');
   const toast = el.querySelector('.toast');
+  const nameInput = el.querySelector('.jot-name');
   const pickColor = el.querySelector('.pick-color');
   const pickSize = el.querySelector('.pick-size');
   const themeBtn = el.querySelector('.theme-btn');
@@ -235,7 +237,7 @@ export function mountEditor(root, store, jot) {
 
   async function exportJot(format) {
     closePopovers();
-    const name = `jotted-${jot.id.slice(-6).toLowerCase()}`;
+    const name = jot.name.replace(/[^a-z0-9-]+/gi, '-').replace(/^-+|-+$/g, '').toLowerCase() || `jotted-${jot.id.slice(-6).toLowerCase()}`;
     if (format === 'svg') {
       downloadBlob(new Blob([jotToSVG(jot)], { type: 'image/svg+xml' }), `${name}.svg`);
     } else {
@@ -282,7 +284,7 @@ export function mountEditor(root, store, jot) {
       try {
         if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) {
           showToast('Rendering PDF…');
-          const { renderPdfPages, MAX_PAGES } = await import('./pdf.js?v=7691a2dfd1');
+          const { renderPdfPages, MAX_PAGES } = await import('./pdf.js?v=b64673d616');
           const { pages, total } = await renderPdfPages(file, (i, n) => showToast(`Rendering page ${i} of ${n}…`));
           if (pages.length) placeStack(pages);
           showToast(total > MAX_PAGES ? `Added first ${MAX_PAGES} of ${total} pages` : `Added ${pages.length} page${pages.length === 1 ? '' : 's'}`);
@@ -850,17 +852,44 @@ export function mountEditor(root, store, jot) {
     }
   }
 
+  // Jot name: edit in place, saved on Enter or blur.
+  function fitNameInput() {
+    nameInput.style.width = `${Math.max(6, Math.min(40, nameInput.value.length + 1))}ch`;
+  }
+  function renderName() {
+    nameInput.value = jot.name;
+    fitNameInput();
+    document.title = `Jotted · ${jot.name}`;
+  }
+  nameInput.addEventListener('input', fitNameInput);
+  nameInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') nameInput.blur();
+    if (e.key === 'Escape') { nameInput.value = jot.name; nameInput.blur(); }
+    e.stopPropagation();
+  });
+  nameInput.addEventListener('change', () => {
+    jot.name = cleanName(nameInput.value, defaultName(jot.id));
+    renderName();
+    scheduleSave();
+  });
+  nameInput.addEventListener('blur', () => { nameInput.value = jot.name; fitNameInput(); });
+
   // Toolbar buttons must not keep keyboard focus, otherwise Space or Enter
   // (used for panning / typing) would re-trigger the last button clicked.
   function onHudClick(e) {
     const btn = e.target.closest('button, a');
     if (btn) btn.blur();
   }
+  // Writing on the canvas should take focus away from the name field.
+  function onCanvasPointerDown() {
+    if (document.activeElement === nameInput) nameInput.blur();
+  }
 
   const preventDefault = (e) => e.preventDefault();
   const onBeforeUnload = () => { if (saveTimer) saveNow(); };
   const onVisibility = () => { if (document.visibilityState === 'hidden' && saveTimer) saveNow(); };
 
+  live.addEventListener('pointerdown', onCanvasPointerDown);
   live.addEventListener('pointerdown', onPointerDown);
   live.addEventListener('pointermove', onPointerMove);
   live.addEventListener('pointerup', onPointerUp);
@@ -887,7 +916,7 @@ export function mountEditor(root, store, jot) {
   el.querySelector('[data-more="paper"]').textContent = `Paper: ${PAPER_LABELS[jot.paper] ?? 'Plain'}`;
   updateHistoryButtons();
   resize();
-  document.title = `Jotted · ${jot.id.slice(-6)}`;
+  renderName();
 
   return function unmount() {
     clearTimeout(toastTimer);
