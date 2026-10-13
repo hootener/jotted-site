@@ -100,7 +100,24 @@ html, body {
 }
 .pick.erase .dot { box-shadow: none; }
 .theme-btn { font-size: 16px; }
-.export-wrap, .add-wrap { position: relative; }
+.export-wrap, .add-wrap, .more-wrap { position: relative; }
+.more-wrap { display: none; }
+.more-menu {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 10px);
+  right: 0;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+  min-width: 200px;
+}
+.more-wrap.open .more-menu { display: flex; }
+.more-menu .btn { text-align: left; font-size: 15px; padding: 10px 14px; }
 .drop-hint {
   position: absolute;
   inset: 16px;
@@ -300,8 +317,12 @@ html, body {
   .swatch { width: 38px; height: 38px; }
   .size { width: 42px; height: 42px; }
   .btn.icon { width: 44px; height: 44px; font-size: 20px; }
-  .btn.clear, .btn.paper-btn, .btn.export-btn, .btn.add-btn { font-size: 14px; padding: 10px 10px; min-width: 0; }
-  .export-menu, .add-menu { left: auto; right: 0; transform: none; }
+  /* Secondary actions fold into the ⋯ menu. */
+  .group.actions > .paper-btn, .group.actions > .theme-btn, .group.actions > .add-wrap,
+  .group.actions > .export-wrap, .group.actions > .clear { display: none; }
+  .more-wrap { display: block; }
+  .more-menu { left: auto; right: 0; }
+  .group.actions .divider { display: none; }
   .hud.top { gap: 6px; }
   .zoom { min-width: 48px; }
 }

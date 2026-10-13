@@ -71,6 +71,17 @@ export function mountEditor(root, store, jot) {
             </div>
             <span class="divider"></span>
             <button class="btn clear" title="Clear this jot (Delete)">Clear</button>
+            <div class="more-wrap">
+              <button class="btn icon more-btn" title="More" aria-label="More" aria-haspopup="true" aria-expanded="false">⋯</button>
+              <div class="more-menu popover" role="menu">
+                <button class="btn" data-more="paper" role="menuitem">Paper</button>
+                <button class="btn" data-more="theme" role="menuitem">Light canvas</button>
+                <button class="btn" data-more="add" role="menuitem">Add image or PDF…</button>
+                <button class="btn" data-more="png" role="menuitem">Export PNG</button>
+                <button class="btn" data-more="svg" role="menuitem">Export SVG</button>
+                <button class="btn danger" data-more="clear" role="menuitem">Clear jot</button>
+              </div>
+            </div>
           </div>
         </div>
       </footer>
@@ -105,6 +116,8 @@ export function mountEditor(root, store, jot) {
   const exportBtn = el.querySelector('.export-btn');
   const exportWrap = el.querySelector('.export-wrap');
   const addBtn = el.querySelector('.add-btn');
+  const moreWrap = el.querySelector('.more-wrap');
+  const moreBtn = el.querySelector('.more-btn');
   const addWrap = el.querySelector('.add-wrap');
   const fileInput = el.querySelector('.file-input');
   const dropHint = el.querySelector('.drop-hint');
@@ -147,6 +160,18 @@ export function mountEditor(root, store, jot) {
   themeBtn.addEventListener('click', () => setTheme(jot.theme === 'light' ? 'dark' : 'light'));
   exportBtn.addEventListener('click', () => togglePopover(exportWrap));
   addBtn.addEventListener('click', () => togglePopover(addWrap));
+  moreBtn.addEventListener('click', () => togglePopover(moreWrap));
+  for (const b of el.querySelectorAll('.more-menu button')) {
+    b.addEventListener('click', () => {
+      const what = b.dataset.more;
+      if (what === 'paper') { cyclePaper(1); return; } // stays open so the label is visible
+      closePopovers();
+      if (what === 'theme') setTheme(jot.theme === 'light' ? 'dark' : 'light');
+      else if (what === 'add') fileInput.click();
+      else if (what === 'png' || what === 'svg') exportJot(what);
+      else if (what === 'clear') clearJot();
+    });
+  }
   el.querySelector('[data-add="file"]').addEventListener('click', () => { closePopovers(); fileInput.click(); });
   const snapItem = el.querySelector('[data-add="snapshot"]');
   if (globalThis.jotted?.snapshot) {
@@ -194,6 +219,7 @@ export function mountEditor(root, store, jot) {
     const theme = jot.theme ?? 'dark';
     el.dataset.theme = theme;
     themeBtn.textContent = theme === 'light' ? '☾' : '☀';
+    el.querySelector('[data-more="theme"]').textContent = theme === 'light' ? 'Dark canvas' : 'Light canvas';
     for (const b of swatches.querySelectorAll('.swatch:not(.eraser-swatch)')) b.style.setProperty('--c', colorForTheme(b.dataset.hex, theme));
     pickColor.querySelector('.dot').style.background = colorForTheme(color, theme);
   }
@@ -331,12 +357,12 @@ export function mountEditor(root, store, jot) {
     const open = !group.classList.contains('open');
     closePopovers();
     group.classList.toggle('open', open);
-    group.querySelector('.pick, .export-btn, .add-btn').setAttribute('aria-expanded', String(open));
+    group.querySelector('.pick, .export-btn, .add-btn, .more-btn').setAttribute('aria-expanded', String(open));
   }
   function closePopovers() {
-    for (const g of el.querySelectorAll('.group.open, .export-wrap.open, .add-wrap.open')) {
+    for (const g of el.querySelectorAll('.group.open, .export-wrap.open, .add-wrap.open, .more-wrap.open')) {
       g.classList.remove('open');
-      g.querySelector('.pick, .export-btn, .add-btn').setAttribute('aria-expanded', 'false');
+      g.querySelector('.pick, .export-btn, .add-btn, .more-btn').setAttribute('aria-expanded', 'false');
     }
   }
   pickColor.addEventListener('click', () => togglePopover(pickColor.parentElement));
@@ -346,6 +372,7 @@ export function mountEditor(root, store, jot) {
     jot.paper = PAPER_MODES.includes(mode) ? mode : 'none';
     paperBtn.textContent = PAPER_LABELS[jot.paper];
     paperBtn.setAttribute('aria-pressed', String(jot.paper !== 'none'));
+    el.querySelector('[data-more="paper"]').textContent = `Paper: ${PAPER_LABELS[jot.paper]}`;
     paperDirty = true;
     requestRender();
     scheduleSave();
@@ -856,6 +883,7 @@ export function mountEditor(root, store, jot) {
   setSize(sizeKey);
   paperBtn.textContent = PAPER_LABELS[jot.paper] ?? 'Plain';
   paperBtn.setAttribute('aria-pressed', String(jot.paper !== 'none'));
+  el.querySelector('[data-more="paper"]').textContent = `Paper: ${PAPER_LABELS[jot.paper] ?? 'Plain'}`;
   updateHistoryButtons();
   resize();
   document.title = `Jotted · ${jot.id.slice(-6)}`;
