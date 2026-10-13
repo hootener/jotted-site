@@ -1,0 +1,47 @@
+{
+  "version": "2026.10.13.006",
+  "publishedAt": "2026-10-13T16:44:42.247Z",
+  "releaseUrl": "https://github.com/hootener/jotted-site/releases/tag/2026.10.13.006",
+  "files": [
+    {
+      "name": "Jotted-mac-arm64.dmg",
+      "platform": "macOS",
+      "label": "Apple Silicon (.dmg)",
+      "size": 128798475,
+      "md5": "971685e6dc31904f1a6f79a4875aba25",
+      "sha256": "e286a743d3bdf5f917c4030af54ff4b0bee6eb57e9de2ad354fb25acf5e4b51c"
+    },
+    {
+      "name": "Jotted-mac-x64.dmg",
+      "platform": "macOS",
+      "label": "Intel (.dmg)",
+      "size": 132609097,
+      "md5": "a6e778d5fb8a70c7ad5ae5e33ebe349a",
+      "sha256": "220d657d0cc9f0f3e00aa98dc2ec3564add10ed8d849e718acaef692cae212a1"
+    },
+    {
+      "name": "Jotted-win-x64-setup.exe",
+      "platform": "Windows",
+      "label": "Installer (.exe)",
+      "size": 111144995,
+      "md5": "8bb4793668aaa8e2661949dbce10ea75",
+      "sha256": "7fa4f18969eac316f5ff02b7eaa39df6e40f6d42437d692280b0a5031fffbe2d"
+    },
+    {
+      "name": "Jotted-win-x64-portable.exe",
+      "platform": "Windows",
+      "label": "Portable (.exe)",
+      "size": 110986760,
+      "md5": "70eb71cef070da6515a02672771b6e82",
+      "sha256": "d5fd8a48eec706cdfe878faefefafd99529c702536e23c3807fa65066d9b7634"
+    },
+    {
+      "name": "Jotted-linux-x86_64.AppImage",
+      "platform": "Linux",
+      "label": "AppImage",
+      "size": 126035593,
+      "md5": "0ca64df9501e93c4c978fb14e13846d7",
+      "sha256": "ea336afa997b468c4eed0f43684b43370ebeb66685622ddc22df3784fb6c095b"
+    }
+  ]
+}
