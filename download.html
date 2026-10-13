@@ -4,6 +4,20 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Download Jotted</title>
+  <meta name="description" content="Handwritten notes, none of the bloat. Free for macOS, Windows and Linux, or use it in the browser.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Jotted">
+  <meta property="og:title" content="Download Jotted">
+  <meta property="og:description" content="Handwritten notes, none of the bloat. Free for macOS, Windows and Linux, or use it in the browser.">
+  <meta property="og:url" content="https://jotted.ink/download.html">
+  <meta property="og:image" content="https://jotted.ink/assets/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="jotted, in white cursive on black">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Download Jotted">
+  <meta name="twitter:description" content="Handwritten notes, none of the bloat. Free for macOS, Windows and Linux, or use it in the browser.">
+  <meta name="twitter:image" content="https://jotted.ink/assets/og.png">
   <link rel="icon" href="assets/icon.png">
   <link rel="stylesheet" href="site.css">
 </head>
@@ -57,12 +71,12 @@
       <h1>Let Claude see your jots</h1>
       <p>Jotted ships a small MCP server for Claude Code. It reads the desktop app’s jots and shows them to Claude as images. Read-only, local, no account.</p>
     </section>
-    <pre class="code"><code>git clone https://github.com/hootener/jotted-site.git
-cd jotted-site/mcp &amp;&amp; npm install
+    <pre class="code"><code>git clone https://github.com/hootener/jotted-mcp.git
+cd jotted-mcp &amp;&amp; npm install
 claude mcp add jotted -- node "$PWD/server.mjs"</code></pre>
     <p class="fine">
       Then, in a new Claude Code session: “look at my latest jot”, or name one, like “show me brave-gullible-snail”.
-      Tools: <code>list_jots</code>, <code>get_jot</code>, <code>get_latest_jot</code>. Needs Node 22 or newer and the desktop app (browser-version jots stay in the browser).
+      Tools: <code>list_jots</code>, <code>get_jot</code>, <code>get_latest_jot</code>. Needs Node 22 or newer and the desktop app (browser-version jots stay in the browser). Source: <a href="https://github.com/hootener/jotted-mcp">github.com/hootener/jotted-mcp</a>.
     </p>
 
     <p class="fine">
