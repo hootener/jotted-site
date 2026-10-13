@@ -1,7 +1,7 @@
-import { createStore } from './store.js';
-import { isUlid } from './ulid.js';
-import { mountEditor } from './editor.js';
-import { mountList } from './list.js';
+import { createStore } from './store.js?v=dcdba868ef';
+import { isUlid } from './ulid.js?v=dcdba868ef';
+import { mountEditor } from './editor.js?v=dcdba868ef';
+import { mountList } from './list.js?v=dcdba868ef';
 
 const root = document.getElementById('app');
 if (globalThis.jotted) {
