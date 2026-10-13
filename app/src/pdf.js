@@ -4,7 +4,7 @@ export const MAX_PAGES = 20;
 
 let pdfjsPromise = null;
 function pdfjs() {
-  pdfjsPromise ??= import('../vendor/pdfjs/pdf.min.mjs?v=c12a0ee880').then((lib) => {
+  pdfjsPromise ??= import('../vendor/pdfjs/pdf.min.mjs?v=7691a2dfd1').then((lib) => {
     lib.GlobalWorkerOptions.workerSrc = new URL('../vendor/pdfjs/pdf.worker.min.mjs', import.meta.url).href;
     return lib;
   });

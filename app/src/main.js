@@ -1,7 +1,8 @@
-import { createStore } from './store.js?v=c12a0ee880';
-import { isUlid } from './ulid.js?v=c12a0ee880';
-import { mountEditor } from './editor.js?v=c12a0ee880';
-import { mountList } from './list.js?v=c12a0ee880';
+import { createStore } from './store.js?v=7691a2dfd1';
+import { isUlid } from './ulid.js?v=7691a2dfd1';
+import { mountEditor } from './editor.js?v=7691a2dfd1';
+import { mountList } from './list.js?v=7691a2dfd1';
+import { fitPlacement, imageId } from './images.js?v=7691a2dfd1';
 
 const root = document.getElementById('app');
 if (globalThis.jotted) {
@@ -58,6 +59,16 @@ globalThis.jotted?.onUpdate?.(({ state, version }) => {
     bar.innerHTML = `Jotted ${version} is available. <a class="btn primary" href="https://hootener.github.io/jotted-site/download.html" target="_blank" rel="noopener">Download</a> <button class="btn ghost dismiss">Later</button>`;
   }
   bar.querySelector('.dismiss').addEventListener('click', () => bar.remove());
+});
+
+// Desktop screen capture: open the captured area as a new jot.
+globalThis.jotted?.onCapture?.(async ({ src, w, h }) => {
+  const jot = store.newJot();
+  const vw = innerWidth;
+  const vh = innerHeight;
+  jot.images.push({ id: imageId(), src, ...fitPlacement(w, h, vw, vh, vw / 2, vh / 2) });
+  await store.saveJot(jot);
+  location.hash = `#/${jot.id}`;
 });
 
 // Desktop menu actions (no-op in the browser build).
