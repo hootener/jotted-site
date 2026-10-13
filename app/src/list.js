@@ -1,5 +1,5 @@
 // Home page: list of saved jots.
-import { renderThumbnail } from './canvas.js';
+import { renderThumbnail, createImageCache } from './canvas.js';
 
 export function mountList(root, store, jots) {
   root.innerHTML = `
@@ -13,6 +13,13 @@ export function mountList(root, store, jots) {
       <main class="grid"></main>
     </div>`;
   const grid = root.querySelector('.grid');
+  const pending = new Map(); // card -> jot, re-rendered when an image finishes loading
+  const imageCache = createImageCache(() => {
+    for (const [card, jot] of pending) {
+      const thumb = card.querySelector('.thumb');
+      if (thumb) thumb.replaceChildren(renderThumbnail(jot, 240, 150, imageCache));
+    }
+  });
   root.querySelector('.new').addEventListener('click', async () => {
     const jot = await store.saveJot(store.newJot());
     location.hash = `#/${jot.id}`;
@@ -48,7 +55,8 @@ export function mountList(root, store, jots) {
         </div>
         <button class="btn ghost delete" title="Delete jot">Delete</button>
       </div>`;
-    card.querySelector('.thumb').append(renderThumbnail(jot, 240, 150));
+    card.querySelector('.thumb').append(renderThumbnail(jot, 240, 150, imageCache));
+    if (jot.images?.length) pending.set(card, jot);
 
     // Two-step delete: first click arms, second click within 3s confirms.
     const del = card.querySelector('.delete');

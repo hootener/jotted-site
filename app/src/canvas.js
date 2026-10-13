@@ -1,6 +1,7 @@
 // View transform and canvas rendering helpers.
 import { strokeOutline, strokeBounds } from './stroke.js';
 import { colorForTheme, THEMES } from './palette.js';
+import { imageBounds, loadImage } from './images.js';
 
 export const MIN_SCALE = 0.1;
 export const MAX_SCALE = 16;
@@ -97,7 +98,7 @@ export function drawStrokes(ctx, strokes, view, cssWidth, cssHeight, theme = 'da
 }
 
 /** Render a jot's strokes fitted into a small canvas for the list page. */
-export function renderThumbnail(jot, width, height) {
+export function renderThumbnail(jot, width, height, cache = null) {
   const canvas = document.createElement('canvas');
   const dpr = window.devicePixelRatio || 1;
   canvas.width = width * dpr;
@@ -109,11 +110,11 @@ export function renderThumbnail(jot, width, height) {
   ctx.scale(dpr, dpr);
   ctx.fillStyle = THEMES[theme].bg;
   ctx.fillRect(0, 0, width, height);
-  if (jot.strokes.length === 0) return canvas;
+  const images = jot.images ?? [];
+  if (jot.strokes.length === 0 && images.length === 0) return canvas;
 
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (const s of jot.strokes) {
-    const b = strokeBounds(s);
+  for (const b of [...jot.strokes.map(strokeBounds), ...images.map(imageBounds)]) {
     minX = Math.min(minX, b.minX);
     minY = Math.min(minY, b.minY);
     maxX = Math.max(maxX, b.maxX);
@@ -124,6 +125,12 @@ export function renderThumbnail(jot, width, height) {
   const ox = (width - (maxX - minX) * scale) / 2 - minX * scale;
   const oy = (height - (maxY - minY) * scale) / 2 - minY * scale;
   ctx.setTransform(dpr * scale, 0, 0, dpr * scale, dpr * ox, dpr * oy);
+  if (cache) {
+    for (const im of images) {
+      const el = cache.get(im.src);
+      if (el) ctx.drawImage(el, im.x, im.y, im.w, im.h);
+    }
+  }
   for (const s of jot.strokes) drawStroke(ctx, s, theme);
   return canvas;
 }
@@ -179,4 +186,37 @@ export function drawPaper(ctx, view, mode, cssWidth, cssHeight, dpr, theme = 'da
     }
   }
   ctx.stroke();
+}
+
+/**
+ * Image layer cache: data URL -> HTMLImageElement. Images that are still
+ * loading are skipped this frame; `onLoad` is called so the caller can redraw.
+ */
+export function createImageCache(onLoad) {
+  const cache = new Map();
+  return {
+    get(src) {
+      const hit = cache.get(src);
+      if (hit) return hit.img;
+      const entry = { img: null };
+      cache.set(src, entry);
+      loadImage(src).then((img) => {
+        entry.img = img;
+        onLoad?.();
+      }).catch(() => cache.delete(src));
+      return null;
+    },
+  };
+}
+
+/** Draw image layers that intersect the visible world rect. */
+export function drawImages(ctx, images, view, cssWidth, cssHeight, cache) {
+  const [vx0, vy0] = view.screenToWorld(0, 0);
+  const [vx1, vy1] = view.screenToWorld(cssWidth, cssHeight);
+  for (const im of images) {
+    const b = imageBounds(im);
+    if (b.maxX < vx0 || b.minX > vx1 || b.maxY < vy0 || b.minY > vy1) continue;
+    const el = cache.get(im.src);
+    if (el) ctx.drawImage(el, im.x, im.y, im.w, im.h);
+  }
 }

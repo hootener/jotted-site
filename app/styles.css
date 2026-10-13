@@ -12,6 +12,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 
 html, body {
   margin: 0;
@@ -99,8 +100,47 @@ html, body {
 }
 .pick.erase .dot { box-shadow: none; }
 .theme-btn { font-size: 16px; }
-.export-wrap { position: relative; }
-.export-menu {
+.export-wrap, .add-wrap { position: relative; }
+.drop-hint {
+  position: absolute;
+  inset: 16px;
+  border: 2px dashed var(--accent);
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+  font-size: 18px;
+  pointer-events: none;
+  background: rgba(127, 212, 255, 0.06);
+}
+.snapshot-dialog {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(420px, calc(100% - 32px));
+  padding: 18px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(14px);
+}
+.snapshot-dialog label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--muted); }
+.snapshot-dialog input, .snapshot-dialog select {
+  font: inherit;
+  font-size: 15px;
+  color: var(--fg);
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.snapshot-dialog .row { display: flex; justify-content: flex-end; gap: 8px; }
+.export-menu, .add-menu {
   display: none;
   position: absolute;
   bottom: calc(100% + 10px);
@@ -114,8 +154,8 @@ html, body {
   border-radius: 14px;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
 }
-.export-wrap.open .export-menu { display: flex; }
-.export-menu .btn { min-width: 72px; text-align: center; }
+.export-wrap.open .export-menu, .add-wrap.open .add-menu { display: flex; }
+.export-menu .btn, .add-menu .btn { min-width: 72px; text-align: center; white-space: nowrap; }
 .editor.pan-ready .layer.live { cursor: grab; }
 .editor.panning .layer.live { cursor: grabbing; }
 
@@ -260,8 +300,8 @@ html, body {
   .swatch { width: 38px; height: 38px; }
   .size { width: 42px; height: 42px; }
   .btn.icon { width: 44px; height: 44px; font-size: 20px; }
-  .btn.clear, .btn.paper-btn, .btn.export-btn { font-size: 14px; padding: 10px 10px; min-width: 0; }
-  .export-menu { left: auto; right: 0; transform: none; }
+  .btn.clear, .btn.paper-btn, .btn.export-btn, .btn.add-btn { font-size: 14px; padding: 10px 10px; min-width: 0; }
+  .export-menu, .add-menu { left: auto; right: 0; transform: none; }
   .hud.top { gap: 6px; }
   .zoom { min-width: 48px; }
 }

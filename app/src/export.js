@@ -1,14 +1,14 @@
 // Export a jot as SVG or PNG, cropped to the ink with padding.
 import { strokeOutline, strokeBounds, outlineToPathData } from './stroke.js';
 import { colorForTheme, THEMES } from './palette.js';
+import { imageBounds, loadImage } from './images.js';
 
 const PAD = 32;
 
 export function jotBounds(jot) {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (const s of jot.strokes) {
-    if (!s.points.length) continue;
-    const b = strokeBounds(s);
+  const bounds = [...jot.strokes.filter((s) => s.points.length).map(strokeBounds), ...(jot.images ?? []).map(imageBounds)];
+  for (const b of bounds) {
     minX = Math.min(minX, b.minX);
     minY = Math.min(minY, b.minY);
     maxX = Math.max(maxX, b.maxX);
@@ -30,15 +30,18 @@ export function jotToSVG(jot) {
     })
     .filter(Boolean)
     .join('\n');
+  const images = (jot.images ?? [])
+    .map((im) => `  <image x="${f(im.x)}" y="${f(im.y)}" width="${f(im.w)}" height="${f(im.h)}" href="${im.src}"/>`)
+    .join('\n');
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="${f(b.minX)} ${f(b.minY)} ${w} ${h}">
   <rect x="${f(b.minX)}" y="${f(b.minY)}" width="${w}" height="${h}" fill="${THEMES[theme].bg}"/>
-${paths}
+${images ? images + '\n' : ''}${paths}
 </svg>
 `;
 }
 
 /** Renders the jot to a PNG Blob at `scale` device pixels per world unit. */
-export function jotToPNG(jot, drawStroke, scale = 2) {
+export async function jotToPNG(jot, drawStroke, scale = 2) {
   const theme = jot.theme ?? 'dark';
   const b = jotBounds(jot);
   const w = Math.ceil(b.maxX - b.minX);
@@ -50,6 +53,10 @@ export function jotToPNG(jot, drawStroke, scale = 2) {
   ctx.fillStyle = THEMES[theme].bg;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.setTransform(scale, 0, 0, scale, -b.minX * scale, -b.minY * scale);
+  for (const im of jot.images ?? []) {
+    const el = await loadImage(im.src).catch(() => null);
+    if (el) ctx.drawImage(el, im.x, im.y, im.w, im.h);
+  }
   for (const s of jot.strokes) drawStroke(ctx, s, theme);
   return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
 }

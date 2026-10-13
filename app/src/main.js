@@ -12,7 +12,7 @@ if (globalThis.jotted) {
     document.body.prepend(bar);
   }
 }
-const store = createStore();
+const store = await createStore();
 let unmount = null;
 
 let routeToken = 0;

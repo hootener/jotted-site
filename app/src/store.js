@@ -18,6 +18,7 @@ export function newJot(now = Date.now) {
     view: { x: 0, y: 0, scale: 1 },
     paper: 'none',
     theme: 'dark',
+    images: [],
     strokes: [],
   };
 }
@@ -28,12 +29,20 @@ export function normalizeJot(jot, id) {
   jot.view ??= { x: 0, y: 0, scale: 1 };
   jot.paper ??= 'none';
   jot.theme ??= 'dark';
+  jot.images ??= [];
   return jot;
 }
 
-/** Picks the file-backed store when running inside Electron, else localStorage. */
-export function createStore() {
+/**
+ * Picks the file-backed store inside Electron, IndexedDB in browsers that
+ * have it (images make jots too big for localStorage), else localStorage.
+ */
+export async function createStore() {
   if (globalThis.jotted?.jots) return createBridgeStore(globalThis.jotted.jots);
+  if (globalThis.indexedDB) {
+    const { createIndexedDBStore } = await import('./idbStore.js');
+    return createIndexedDBStore(globalThis.localStorage);
+  }
   return createLocalStorageStore(globalThis.localStorage);
 }
 

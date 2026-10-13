@@ -1,5 +1,6 @@
 // Jot editor: full-screen pen canvas with pan/zoom, undo, autosave.
-import { View, fitCanvas, beginFrame, drawStrokes, drawStroke, drawPaper, PAPER_MODES } from './canvas.js';
+import { View, fitCanvas, beginFrame, drawStrokes, drawStroke, drawImages, drawPaper, createImageCache, PAPER_MODES } from './canvas.js';
+import { fitPlacement, pointInImage, imageId, blobToImageData } from './images.js';
 import { createSmoother, simulatePressure, hitTestStroke, PEN_SIZES } from './stroke.js';
 import { PALETTE, colorForTheme } from './palette.js';
 import { jotToSVG, jotToPNG, downloadBlob } from './export.js';
@@ -16,6 +17,8 @@ export function mountEditor(root, store, jot) {
   const strokes = jot.strokes;
   // actions: { type: 'add', stroke } | { type: 'clear', strokes }
   //        | { type: 'erase', items: [{ index, stroke }] } | { type: 'move', dx, dy }
+  //        | { type: 'image', image } | { type: 'images', images }
+  //        | { type: 'removeImage', image, index }
   const undoStack = [];
   const redoStack = [];
   let color = prefs.color;
@@ -51,6 +54,14 @@ export function mountEditor(root, store, jot) {
           <div class="group actions">
             <button class="btn paper-btn" title="Paper: none / grid / lines / dots (G)"></button>
             <button class="btn icon theme-btn" title="Light / dark canvas (L)" aria-label="Toggle light canvas"></button>
+            <div class="add-wrap">
+              <button class="btn add-btn" title="Add an image, PDF or web page" aria-haspopup="true" aria-expanded="false">Add</button>
+              <div class="add-menu popover" role="menu">
+                <button class="btn" data-add="file" role="menuitem">Image or PDF…</button>
+                <button class="btn" data-add="snapshot" role="menuitem" hidden>Web page…</button>
+              </div>
+              <input class="file-input" type="file" accept="image/*,application/pdf" multiple hidden>
+            </div>
             <div class="export-wrap">
               <button class="btn export-btn" title="Export (${MOD_LABEL}E for PNG, Shift+${MOD_LABEL}E for SVG)" aria-haspopup="true" aria-expanded="false">Export</button>
               <div class="export-menu popover" role="menu">
@@ -64,6 +75,14 @@ export function mountEditor(root, store, jot) {
         </div>
       </footer>
       <div class="toast" aria-live="polite"></div>
+      <div class="drop-hint" hidden>Drop to add</div>
+      <form class="snapshot-dialog" hidden>
+        <label>Web page URL <input name="url" type="url" placeholder="https://example.com" required autocomplete="off"></label>
+        <label>Width
+          <select name="width"><option value="1280">Desktop (1280)</option><option value="390">Phone (390)</option></select>
+        </label>
+        <div class="row"><button type="button" class="btn cancel">Cancel</button><button type="submit" class="btn primary">Snapshot</button></div>
+      </form>
     </div>`;
 
   const el = root.firstElementChild;
@@ -85,6 +104,13 @@ export function mountEditor(root, store, jot) {
   const themeBtn = el.querySelector('.theme-btn');
   const exportBtn = el.querySelector('.export-btn');
   const exportWrap = el.querySelector('.export-wrap');
+  const addBtn = el.querySelector('.add-btn');
+  const addWrap = el.querySelector('.add-wrap');
+  const fileInput = el.querySelector('.file-input');
+  const dropHint = el.querySelector('.drop-hint');
+  const snapDialog = el.querySelector('.snapshot-dialog');
+  const images = jot.images;
+  const imageCache = createImageCache(() => { baseDirty = true; requestRender(); });
   const swatches = el.querySelector('.swatches');
   const sizes = el.querySelector('.sizes');
 
@@ -120,6 +146,26 @@ export function mountEditor(root, store, jot) {
   }
   themeBtn.addEventListener('click', () => setTheme(jot.theme === 'light' ? 'dark' : 'light'));
   exportBtn.addEventListener('click', () => togglePopover(exportWrap));
+  addBtn.addEventListener('click', () => togglePopover(addWrap));
+  el.querySelector('[data-add="file"]').addEventListener('click', () => { closePopovers(); fileInput.click(); });
+  const snapItem = el.querySelector('[data-add="snapshot"]');
+  if (globalThis.jotted?.snapshot) {
+    snapItem.hidden = false;
+    snapItem.addEventListener('click', () => { closePopovers(); openSnapshotDialog(); });
+  }
+  fileInput.addEventListener('change', async () => {
+    const files = [...fileInput.files];
+    fileInput.value = '';
+    await addFiles(files);
+  });
+  snapDialog.querySelector('.cancel').addEventListener('click', () => { snapDialog.hidden = true; });
+  snapDialog.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const url = snapDialog.url.value.trim();
+    const width = Number(snapDialog.width.value);
+    snapDialog.hidden = true;
+    await addSnapshot(url, width);
+  });
   for (const b of el.querySelectorAll('.export-menu button')) {
     b.addEventListener('click', () => exportJot(b.dataset.format));
   }
@@ -173,6 +219,96 @@ export function mountEditor(root, store, jot) {
     showToast(`Exported ${format.toUpperCase()}`);
   }
 
+  // ---- Image layers ------------------------------------------------------
+  function viewportWorld() {
+    const [x0, y0] = view.screenToWorld(0, 0);
+    const [x1, y1] = view.screenToWorld(live.clientWidth, live.clientHeight);
+    return { w: x1 - x0, h: y1 - y0, cx: (x0 + x1) / 2, cy: (y0 + y1) / 2 };
+  }
+  /** Add one image at a world point (defaults to the viewport centre). */
+  function placeImage({ src, w, h }, at = null) {
+    const vp = viewportWorld();
+    const cx = at ? at[0] : vp.cx;
+    const cy = at ? at[1] : vp.cy;
+    const im = { id: imageId(), src, ...fitPlacement(w, h, vp.w, vp.h, cx, cy) };
+    images.push(im);
+    commit({ type: 'image', image: im });
+    return im;
+  }
+  /** Stack several pages top to bottom, centred in the viewport. */
+  function placeStack(pages) {
+    const vp = viewportWorld();
+    const first = fitPlacement(pages[0].w, pages[0].h, vp.w, vp.h, vp.cx, vp.cy);
+    const scale = first.w / pages[0].w;
+    const gap = 24;
+    let y = first.y;
+    const added = [];
+    for (const pg of pages) {
+      const im = { id: imageId(), src: pg.src, x: first.x, y: Math.round(y * 100) / 100, w: pg.w * scale, h: pg.h * scale };
+      images.push(im);
+      added.push(im);
+      y += pg.h * scale + gap;
+    }
+    commit({ type: 'images', images: added });
+  }
+  async function addFiles(files, at = null) {
+    for (const file of files) {
+      try {
+        if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) {
+          showToast('Rendering PDF…');
+          const { renderPdfPages, MAX_PAGES } = await import('./pdf.js');
+          const { pages, total } = await renderPdfPages(file, (i, n) => showToast(`Rendering page ${i} of ${n}…`));
+          if (pages.length) placeStack(pages);
+          showToast(total > MAX_PAGES ? `Added first ${MAX_PAGES} of ${total} pages` : `Added ${pages.length} page${pages.length === 1 ? '' : 's'}`);
+        } else if (file.type.startsWith('image/')) {
+          placeImage(await blobToImageData(file), at);
+          showToast('Image added');
+        }
+      } catch (err) {
+        console.error(err);
+        showToast(`Couldn't add ${file.name || 'that file'}`);
+      }
+    }
+  }
+  async function addSnapshot(url, width) {
+    showToast('Snapshotting page…');
+    try {
+      const shot = await globalThis.jotted.snapshot(url, width);
+      placeImage(shot);
+      showToast(`Added ${shot.title || url}`);
+    } catch (err) {
+      console.error(err);
+      showToast("Couldn't snapshot that page");
+    }
+  }
+  function openSnapshotDialog() {
+    snapDialog.hidden = false;
+    snapDialog.url.value = '';
+    snapDialog.url.focus();
+  }
+  function onPaste(e) {
+    const files = [...(e.clipboardData?.files ?? [])].filter((f) => f.type.startsWith('image/') || f.type === 'application/pdf');
+    if (files.length === 0) return;
+    e.preventDefault();
+    addFiles(files);
+  }
+  function onDragOver(e) {
+    if (![...(e.dataTransfer?.types ?? [])].includes('Files')) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    dropHint.hidden = false;
+  }
+  function onDragLeave() {
+    dropHint.hidden = true;
+  }
+  function onDrop(e) {
+    dropHint.hidden = true;
+    const files = [...(e.dataTransfer?.files ?? [])];
+    if (files.length === 0) return;
+    e.preventDefault();
+    addFiles(files, view.screenToWorld(e.clientX, e.clientY));
+  }
+
   function setColor(hex) {
     color = hex;
     setTool('pen');
@@ -195,12 +331,12 @@ export function mountEditor(root, store, jot) {
     const open = !group.classList.contains('open');
     closePopovers();
     group.classList.toggle('open', open);
-    group.querySelector('.pick, .export-btn').setAttribute('aria-expanded', String(open));
+    group.querySelector('.pick, .export-btn, .add-btn').setAttribute('aria-expanded', String(open));
   }
   function closePopovers() {
-    for (const g of el.querySelectorAll('.group.open, .export-wrap.open')) {
+    for (const g of el.querySelectorAll('.group.open, .export-wrap.open, .add-wrap.open')) {
       g.classList.remove('open');
-      g.querySelector('.pick, .export-btn').setAttribute('aria-expanded', 'false');
+      g.querySelector('.pick, .export-btn, .add-btn').setAttribute('aria-expanded', 'false');
     }
   }
   pickColor.addEventListener('click', () => togglePopover(pickColor.parentElement));
@@ -242,7 +378,7 @@ export function mountEditor(root, store, jot) {
   function updateHistoryButtons() {
     undoBtn.disabled = undoStack.length === 0;
     redoBtn.disabled = redoStack.length === 0;
-    clearBtn.disabled = strokes.length === 0;
+    clearBtn.disabled = strokes.length === 0 && images.length === 0;
   }
   function savePrefs() {
     try {
@@ -280,6 +416,7 @@ export function mountEditor(root, store, jot) {
     if (baseDirty) {
       baseDirty = false;
       beginFrame(baseCtx, view, dpr);
+      drawImages(baseCtx, images, view, base.clientWidth, base.clientHeight, imageCache);
       drawStrokes(baseCtx, strokes, view, base.clientWidth, base.clientHeight, jot.theme);
       zoomBtn.textContent = `${Math.round(view.scale * 100)}%`;
     }
@@ -328,7 +465,10 @@ export function mountEditor(root, store, jot) {
     if (current || undoStack.length === 0) return;
     const action = undoStack.pop();
     if (action.type === 'add') strokes.pop();
-    else if (action.type === 'clear') strokes.push(...action.strokes);
+    else if (action.type === 'clear') { strokes.push(...action.strokes); images.push(...(action.images ?? [])); }
+    else if (action.type === 'image') images.splice(images.indexOf(action.image), 1);
+    else if (action.type === 'images') for (const im of action.images) images.splice(images.indexOf(im), 1);
+    else if (action.type === 'removeImage') images.splice(action.index, 0, action.image);
     else if (action.type === 'erase') for (const { index, stroke } of action.items) strokes.splice(index, 0, stroke);
     else if (action.type === 'move') shiftAll(-action.dx, -action.dy);
     redoStack.push(action);
@@ -338,7 +478,10 @@ export function mountEditor(root, store, jot) {
     if (current || redoStack.length === 0) return;
     const action = redoStack.pop();
     if (action.type === 'add') strokes.push(action.stroke);
-    else if (action.type === 'clear') strokes.length = 0;
+    else if (action.type === 'clear') { strokes.length = 0; images.length = 0; }
+    else if (action.type === 'image') images.push(action.image);
+    else if (action.type === 'images') images.push(...action.images);
+    else if (action.type === 'removeImage') images.splice(images.indexOf(action.image), 1);
     else if (action.type === 'erase') for (const { stroke } of action.items) strokes.splice(strokes.indexOf(stroke), 1);
     else if (action.type === 'move') shiftAll(action.dx, action.dy);
     undoStack.push(action);
@@ -347,12 +490,13 @@ export function mountEditor(root, store, jot) {
 
   function shiftAll(dx, dy) {
     for (const s of strokes) for (const p of s.points) { p[0] = round(p[0] + dx, 2); p[1] = round(p[1] + dy, 2); }
+    for (const im of images) { im.x = round(im.x + dx, 2); im.y = round(im.y + dy, 2); }
   }
 
   // Shift+arrows nudge the whole jot; rapid presses merge into one undo step.
   let lastNudge = 0;
   function nudge(dx, dy) {
-    if (current || strokes.length === 0) return;
+    if (current || (strokes.length === 0 && images.length === 0)) return;
     shiftAll(dx, dy);
     const last = undoStack[undoStack.length - 1];
     if (last?.type === 'move' && performance.now() - lastNudge < 800) {
@@ -371,8 +515,8 @@ export function mountEditor(root, store, jot) {
   }
 
   function clearJot() {
-    if (current || strokes.length === 0) return;
-    commit({ type: 'clear', strokes: strokes.splice(0, strokes.length) });
+    if (current || (strokes.length === 0 && images.length === 0)) return;
+    commit({ type: 'clear', strokes: strokes.splice(0, strokes.length), images: images.splice(0, images.length) });
   }
   function afterHistoryChange() {
     baseDirty = true;
@@ -470,11 +614,18 @@ export function mountEditor(root, store, jot) {
     return e.pointerType === 'pen' && ((e.buttons & 32) !== 0 || e.button === 5);
   }
   function beginErase(e, temporary = false) {
-    erasing = { pointerId: e.pointerId, items: [], restoreTool: temporary ? tool : null };
+    erasing = { pointerId: e.pointerId, items: [], restoreTool: temporary ? tool : null, startImage: null };
     if (temporary) setTool('eraser');
     capture(e.pointerId);
     el.classList.add('erasing');
     eraseAt(e);
+    if (erasing.items.length === 0) {
+      // No stroke under the pointer: remember the image here; a tap (no drag) removes it.
+      const [wx, wy] = view.screenToWorld(e.clientX, e.clientY);
+      for (let i = images.length - 1; i >= 0; i--) {
+        if (pointInImage(images[i], wx, wy)) { erasing.startImage = { image: images[i], index: i, sx: e.clientX, sy: e.clientY }; break; }
+      }
+    }
   }
   function eraseAt(e) {
     const events = e.getCoalescedEvents?.() ?? [];
@@ -492,12 +643,19 @@ export function mountEditor(root, store, jot) {
     }
     requestRender();
   }
-  function endErase() {
+  function endErase(e) {
     const items = erasing.items.sort((a, b) => a.index - b.index);
-    if (erasing.restoreTool) setTool(erasing.restoreTool);
+    const { restoreTool, startImage } = erasing;
     erasing = null;
     el.classList.remove('erasing');
-    if (items.length) commit({ type: 'erase', items });
+    if (restoreTool) setTool(restoreTool);
+    if (items.length) {
+      commit({ type: 'erase', items });
+    } else if (startImage && e && Math.hypot(e.clientX - startImage.sx, e.clientY - startImage.sy) < 8) {
+      images.splice(startImage.index, 1);
+      commit({ type: 'removeImage', image: startImage.image, index: startImage.index });
+      showToast('Image removed');
+    }
   }
 
   function onPointerDown(e) {
@@ -580,7 +738,7 @@ export function mountEditor(root, store, jot) {
   function onPointerUp(e) {
     touches.delete(e.pointerId);
     if (erasing && e.pointerId === erasing.pointerId) {
-      endErase();
+      endErase(e);
       return;
     }
     if (current && e.pointerId === current.pointerId) {
@@ -606,7 +764,10 @@ export function mountEditor(root, store, jot) {
   }
 
   function onKeyDown(e) {
-    if (e.target instanceof HTMLInputElement) return;
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) {
+      if (e.key === 'Escape') snapDialog.hidden = true;
+      return;
+    }
     const mod = IS_MAC ? e.metaKey : e.ctrlKey;
     if (mod && e.key.toLowerCase() === 'z') {
       e.preventDefault();
@@ -680,6 +841,10 @@ export function mountEditor(root, store, jot) {
   live.addEventListener('contextmenu', preventDefault);
   document.addEventListener('gesturestart', preventDefault);
   el.addEventListener('click', onHudClick);
+  document.addEventListener('paste', onPaste);
+  el.addEventListener('dragover', onDragOver);
+  el.addEventListener('dragleave', onDragLeave);
+  el.addEventListener('drop', onDrop);
   window.addEventListener('keydown', onKeyDown);
   window.addEventListener('keyup', onKeyUp);
   window.addEventListener('resize', resize);
@@ -700,6 +865,7 @@ export function mountEditor(root, store, jot) {
     if (saveTimer) saveNow();
     cancelAnimationFrame(frame);
     document.removeEventListener('gesturestart', preventDefault);
+    document.removeEventListener('paste', onPaste);
     window.removeEventListener('keydown', onKeyDown);
     window.removeEventListener('keyup', onKeyUp);
     window.removeEventListener('resize', resize);
