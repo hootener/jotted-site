@@ -1,9 +1,9 @@
 // Jot editor: full-screen pen canvas with pan/zoom, undo, autosave.
-import { View, fitCanvas, beginFrame, drawStrokes, drawStroke, drawImages, drawPaper, createImageCache, PAPER_MODES } from './canvas.js?v=dcdba868ef';
-import { fitPlacement, pointInImage, imageId, blobToImageData } from './images.js?v=dcdba868ef';
-import { createSmoother, simulatePressure, hitTestStroke, PEN_SIZES } from './stroke.js?v=dcdba868ef';
-import { PALETTE, colorForTheme } from './palette.js?v=dcdba868ef';
-import { jotToSVG, jotToPNG, downloadBlob } from './export.js?v=dcdba868ef';
+import { View, fitCanvas, beginFrame, drawStrokes, drawStroke, drawImages, drawPaper, createImageCache, PAPER_MODES } from './canvas.js?v=4314a9ac34';
+import { fitPlacement, pointInImage, imageId, blobToImageData } from './images.js?v=4314a9ac34';
+import { createSmoother, simulatePressure, hitTestStroke, PEN_SIZES } from './stroke.js?v=4314a9ac34';
+import { PALETTE, colorForTheme } from './palette.js?v=4314a9ac34';
+import { jotToSVG, jotToPNG, downloadBlob } from './export.js?v=4314a9ac34';
 
 const SAVE_DELAY_MS = 400;
 // Platform convention: Cmd on macOS, Ctrl elsewhere.
@@ -150,7 +150,7 @@ export function mountEditor(root, store, jot) {
   for (const key of Object.keys(PEN_SIZES)) {
     const b = document.createElement('button');
     b.className = 'size';
-    b.title = `${key[0].toUpperCase()}${key.slice(1)} pen`;
+    b.title = key === 'highlight' ? 'Highlighter' : `${key[0].toUpperCase()}${key.slice(1)} pen`;
     b.setAttribute('role', 'radio');
     b.dataset.size = key;
     b.innerHTML = `<span style="--d:${PEN_SIZES[key] * 2}px"></span>`;
@@ -282,7 +282,7 @@ export function mountEditor(root, store, jot) {
       try {
         if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) {
           showToast('Rendering PDF…');
-          const { renderPdfPages, MAX_PAGES } = await import('./pdf.js?v=dcdba868ef');
+          const { renderPdfPages, MAX_PAGES } = await import('./pdf.js?v=4314a9ac34');
           const { pages, total } = await renderPdfPages(file, (i, n) => showToast(`Rendering page ${i} of ${n}…`));
           if (pages.length) placeStack(pages);
           showToast(total > MAX_PAGES ? `Added first ${MAX_PAGES} of ${total} pages` : `Added ${pages.length} page${pages.length === 1 ? '' : 's'}`);
@@ -346,7 +346,8 @@ export function mountEditor(root, store, jot) {
   function setSize(key) {
     sizeKey = key;
     for (const b of sizes.children) b.setAttribute('aria-checked', String(b.dataset.size === key));
-    pickSize.querySelector('.dot').style.setProperty('--d', `${PEN_SIZES[key] * 2}px`);
+    pickSize.querySelector('.dot').style.setProperty('--d', `${Math.min(24, PEN_SIZES[key] * 2)}px`);
+    pickSize.classList.toggle('highlight', key === 'highlight');
     closePopovers();
     savePrefs();
   }
@@ -571,7 +572,7 @@ export function mountEditor(root, store, jot) {
 
   function rawPoint(e) {
     const [wx, wy] = view.screenToWorld(e.clientX, e.clientY);
-    const p = pressureOf(e, current.last);
+    const p = current.stroke.kind === 'highlight' ? 0.5 : pressureOf(e, current.last);
     current.last = { sx: e.clientX, sy: e.clientY, t: e.timeStamp, p };
     return [wx, wy, p];
   }
@@ -580,7 +581,7 @@ export function mountEditor(root, store, jot) {
     current = {
       pointerId: e.pointerId,
       pointerType: e.pointerType,
-      stroke: { color, size: PEN_SIZES[sizeKey], points: [] },
+      stroke: { color, size: PEN_SIZES[sizeKey], points: [], ...(sizeKey === 'highlight' ? { kind: 'highlight' } : {}) },
       smoother: createSmoother({ streamline: e.pointerType === 'pen' ? 0.4 : 0.3, minDist: 0.5 / view.scale }),
       last: null,
     };

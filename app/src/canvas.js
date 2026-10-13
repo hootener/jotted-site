@@ -1,7 +1,7 @@
 // View transform and canvas rendering helpers.
-import { strokeOutline, strokeBounds } from './stroke.js?v=dcdba868ef';
-import { colorForTheme, THEMES } from './palette.js?v=dcdba868ef';
-import { imageBounds, loadImage } from './images.js?v=dcdba868ef';
+import { strokeOutline, strokeBounds, outlineOptions, HIGHLIGHT_ALPHA } from './stroke.js?v=4314a9ac34';
+import { colorForTheme, THEMES } from './palette.js?v=4314a9ac34';
+import { imageBounds, loadImage } from './images.js?v=4314a9ac34';
 
 export const MIN_SCALE = 0.1;
 export const MAX_SCALE = 16;
@@ -60,9 +60,18 @@ export function pathFromOutline(outline) {
 }
 
 export function drawStroke(ctx, stroke, theme = 'dark') {
-  const outline = strokeOutline(stroke.points, { size: stroke.size });
+  const outline = strokeOutline(stroke.points, outlineOptions(stroke));
   if (outline.length === 0) return;
   ctx.fillStyle = colorForTheme(stroke.color, theme);
+  if (stroke.kind === 'highlight') {
+    ctx.save();
+    ctx.globalAlpha = HIGHLIGHT_ALPHA;
+    // Multiply reads like real marker on white; plain blending works on black.
+    if (theme === 'light') ctx.globalCompositeOperation = 'multiply';
+    ctx.fill(pathFromOutline(outline));
+    ctx.restore();
+    return;
+  }
   ctx.fill(pathFromOutline(outline));
 }
 

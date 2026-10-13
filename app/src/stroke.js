@@ -1,7 +1,13 @@
 // Pure stroke geometry: input smoothing and outline generation.
 // Points are [x, y, pressure] in world units.
 
-export const PEN_SIZES = { small: 2.5, medium: 4, large: 6.5 };
+export const PEN_SIZES = { small: 2.5, medium: 4, large: 6.5, highlight: 18 };
+export const HIGHLIGHT_ALPHA = 0.45;
+
+/** Outline options for a stroke: highlighters are uniform width with no taper. */
+export function outlineOptions(stroke) {
+  return stroke.kind === 'highlight' ? { size: stroke.size, thinning: 0, taper: false } : { size: stroke.size };
+}
 
 /**
  * Streamline smoother. Each incoming raw point is pulled part of the way

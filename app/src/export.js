@@ -1,7 +1,7 @@
 // Export a jot as SVG or PNG, cropped to the ink with padding.
-import { strokeOutline, strokeBounds, outlineToPathData } from './stroke.js?v=dcdba868ef';
-import { colorForTheme, THEMES } from './palette.js?v=dcdba868ef';
-import { imageBounds, loadImage } from './images.js?v=dcdba868ef';
+import { strokeOutline, strokeBounds, outlineToPathData, outlineOptions, HIGHLIGHT_ALPHA } from './stroke.js?v=4314a9ac34';
+import { colorForTheme, THEMES } from './palette.js?v=4314a9ac34';
+import { imageBounds, loadImage } from './images.js?v=4314a9ac34';
 
 const PAD = 32;
 
@@ -25,8 +25,10 @@ export function jotToSVG(jot) {
   const h = Math.ceil(b.maxY - b.minY);
   const paths = jot.strokes
     .map((s) => {
-      const d = outlineToPathData(strokeOutline(s.points, { size: s.size }));
-      return d ? `  <path fill="${colorForTheme(s.color, theme)}" d="${d}"/>` : '';
+      const d = outlineToPathData(strokeOutline(s.points, outlineOptions(s)));
+      if (!d) return '';
+      const extra = s.kind === 'highlight' ? ` fill-opacity="${HIGHLIGHT_ALPHA}"${theme === 'light' ? ' style="mix-blend-mode:multiply"' : ''}` : '';
+      return `  <path fill="${colorForTheme(s.color, theme)}"${extra} d="${d}"/>`;
     })
     .filter(Boolean)
     .join('\n');

@@ -249,6 +249,8 @@ html, body {
   border-radius: 50%;
   background: var(--fg);
 }
+.size[data-size="highlight"] span { width: 18px; height: 8px; border-radius: 3px; opacity: 0.6; }
+.pick-size.highlight .dot { width: 18px; height: 8px; border-radius: 3px; opacity: 0.6; }
 .size:hover { background: rgba(255, 255, 255, 0.08); }
 .size[aria-checked="true"] { border-color: var(--accent); }
 
