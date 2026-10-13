@@ -118,6 +118,9 @@ nav .brand img { height: 26px; display: block; }
 
 
 footer { color: var(--muted); font-size: 13px; text-align: center; padding: 24px 0 40px; }
+.credit { padding: 56px 0 0; font-size: 14px; }
+.credit a { color: #111; text-decoration: underline; text-underline-offset: 3px; }
+.credit a:hover { color: var(--accent); }
 
 /* ---- Download page ---- */
 .page-title { padding: 56px 0 8px; }
