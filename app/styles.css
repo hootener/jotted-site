@@ -80,6 +80,8 @@ html, body {
 .editor[data-theme="light"] .save-state { color: #6a6a74; }
 .editor[data-theme="light"] .save-state.error { color: #c0392b; }
 .editor.erasing-mode .layer.live, .editor.erasing .layer.live { cursor: cell; }
+.editor.redact-mode .layer.live { cursor: crosshair; }
+.btn.redact-btn[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
 /* Eraser swatch and the mobile color button while erasing: a white disc
    with a red diagonal. */
 .eraser-swatch, .pick.erase .dot {
@@ -335,7 +337,7 @@ html, body {
   .size { width: 42px; height: 42px; }
   .btn.icon { width: 44px; height: 44px; font-size: 20px; }
   /* Secondary actions fold into the ⋯ menu. */
-  .group.actions > .paper-btn, .group.actions > .theme-btn, .group.actions > .add-wrap,
+  .group.actions > .paper-btn, .group.actions > .theme-btn, .group.actions > .add-wrap, .group.actions > .redact-btn,
   .group.actions > .export-wrap, .group.actions > .clear { display: none; }
   .more-wrap { display: block; }
   .more-menu { left: auto; right: 0; }

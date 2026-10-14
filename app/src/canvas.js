@@ -1,7 +1,8 @@
 // View transform and canvas rendering helpers.
-import { strokeOutline, strokeBounds, outlineOptions, HIGHLIGHT_ALPHA } from './stroke.js?v=a5099f02f4';
-import { colorForTheme, THEMES } from './palette.js?v=a5099f02f4';
-import { imageBounds, loadImage } from './images.js?v=a5099f02f4';
+import { strokeOutline, strokeBounds, outlineOptions, HIGHLIGHT_ALPHA } from './stroke.js?v=05cc7d9cb5';
+import { colorForTheme, THEMES } from './palette.js?v=05cc7d9cb5';
+import { imageBounds, loadImage } from './images.js?v=05cc7d9cb5';
+import { intersectRect, blockSizeFor, pixelateRegion } from './redact.js?v=05cc7d9cb5';
 
 export const MIN_SCALE = 0.1;
 export const MAX_SCALE = 16;
@@ -139,6 +140,7 @@ export function renderThumbnail(jot, width, height, cache = null) {
       const el = cache.get(im.src);
       if (el) ctx.drawImage(el, im.x, im.y, im.w, im.h);
     }
+    drawRedactions(ctx, images, jot.redactions ?? [], cache);
   }
   for (const s of jot.strokes) drawStroke(ctx, s, theme);
   return canvas;
@@ -227,5 +229,46 @@ export function drawImages(ctx, images, view, cssWidth, cssHeight, cache) {
     if (b.maxX < vx0 || b.minX > vx1 || b.maxY < vy0 || b.minY > vy1) continue;
     const el = cache.get(im.src);
     if (el) ctx.drawImage(el, im.x, im.y, im.w, im.h);
+  }
+}
+
+/**
+ * Pixelated patch for one redaction over one image, in image pixels, cached
+ * by the rect's geometry so panning and zooming never recompute it.
+ */
+const patchCache = new Map();
+function pixelPatch(el, im, sub, key) {
+  const hit = patchCache.get(key);
+  if (hit) return hit;
+  const sx = el.naturalWidth / im.w;
+  const sy = el.naturalHeight / im.h;
+  const px = Math.floor((sub.x - im.x) * sx);
+  const py = Math.floor((sub.y - im.y) * sy);
+  const pw = Math.max(1, Math.ceil(sub.w * sx));
+  const ph = Math.max(1, Math.ceil(sub.h * sy));
+  const off = document.createElement('canvas');
+  off.width = pw;
+  off.height = ph;
+  const octx = off.getContext('2d');
+  octx.drawImage(el, px, py, pw, ph, 0, 0, pw, ph);
+  const data = octx.getImageData(0, 0, pw, ph);
+  pixelateRegion(data.data, pw, ph, 0, 0, pw, ph, blockSizeFor(pw, ph));
+  octx.putImageData(data, 0, 0);
+  if (patchCache.size > 200) patchCache.clear();
+  patchCache.set(key, off);
+  return off;
+}
+
+/** Draw every redaction's pixelated patches over the images they cover. */
+export function drawRedactions(ctx, images, redactions, cache) {
+  for (const r of redactions) {
+    for (const im of images) {
+      const sub = intersectRect(r, imageBounds(im) && { x: im.x, y: im.y, w: im.w, h: im.h });
+      if (!sub) continue;
+      const el = cache.get(im.src);
+      if (!el) continue;
+      const key = `${im.id}|${im.x},${im.y},${im.w},${im.h}|${sub.x},${sub.y},${sub.w},${sub.h}`;
+      ctx.drawImage(pixelPatch(el, im, sub, key), sub.x, sub.y, sub.w, sub.h);
+    }
   }
 }
