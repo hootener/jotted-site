@@ -1,8 +1,8 @@
-version: 2026.1014.5
+version: 2026.1014.6
 files:
-  - url: https://github.com/hootener/jotted-site/releases/download/2026.10.14.005/Jotted-win-x64-setup.exe
-    sha512: 0zMPi83+/0nh+6DbR9qTwHfevZP74UOUw+MpXVJFlMi7CJNLKckZ3JgA4b212JaYg/XKFql5YHIzEZ8d7pE3xg==
-    size: 111153449
-path: https://github.com/hootener/jotted-site/releases/download/2026.10.14.005/Jotted-win-x64-setup.exe
-sha512: 0zMPi83+/0nh+6DbR9qTwHfevZP74UOUw+MpXVJFlMi7CJNLKckZ3JgA4b212JaYg/XKFql5YHIzEZ8d7pE3xg==
-releaseDate: '2026-10-14T20:48:28.767Z'
+  - url: https://github.com/hootener/jotted-site/releases/download/2026.10.14.006/Jotted-win-x64-setup.exe
+    sha512: bwrEcdj3W2mMmcEHSZ1y01ZuUNXC5xLzBdNIbF8mZdt4zA8fheximA6WQR/OaO7c/PY1+eh/NbkrsoBezfWhiA==
+    size: 111154239
+path: https://github.com/hootener/jotted-site/releases/download/2026.10.14.006/Jotted-win-x64-setup.exe
+sha512: bwrEcdj3W2mMmcEHSZ1y01ZuUNXC5xLzBdNIbF8mZdt4zA8fheximA6WQR/OaO7c/PY1+eh/NbkrsoBezfWhiA==
+releaseDate: '2026-10-14T21:26:54.788Z'

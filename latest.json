@@ -1,47 +1,47 @@
 {
-  "version": "2026.10.14.005",
-  "publishedAt": "2026-10-14T20:49:37.093Z",
-  "releaseUrl": "https://github.com/hootener/jotted-site/releases/tag/2026.10.14.005",
+  "version": "2026.10.14.006",
+  "publishedAt": "2026-10-14T21:27:59.389Z",
+  "releaseUrl": "https://github.com/hootener/jotted-site/releases/tag/2026.10.14.006",
   "files": [
     {
       "name": "Jotted-mac-arm64.dmg",
       "platform": "macOS",
       "label": "Apple Silicon (.dmg)",
-      "size": 128783640,
-      "md5": "183132cfa3b2ee8b18eb9b4acca5bc54",
-      "sha256": "7329b185e37954883a2821ea1f80d86c023d7eaf84bbaf13dd7c27331d617ccb"
+      "size": 128771685,
+      "md5": "04c74e8ecee9b638b90bdd261634fb94",
+      "sha256": "6ff6aa98877dbfc33b55ff72f7940f9ca7228eafef2182d2275ead56c953e97f"
     },
     {
       "name": "Jotted-mac-x64.dmg",
       "platform": "macOS",
       "label": "Intel (.dmg)",
-      "size": 132598175,
-      "md5": "accb204db893c694eb684fe42ac38d78",
-      "sha256": "c6b458b15a4292612184445fd620862ebb9bf597b320ffc8dc1432f2dba8fecb"
+      "size": 132601671,
+      "md5": "1a571f80ece7ad666498f05dc45e9ec8",
+      "sha256": "17846aceb4d035bf196f915b0ff3edcc7de71fed59976b687864444035380b0c"
     },
     {
       "name": "Jotted-win-x64-setup.exe",
       "platform": "Windows",
       "label": "Installer (.exe)",
-      "size": 111153449,
-      "md5": "0c61024ca44a3ccdea8d280c5a902b0f",
-      "sha256": "f0c1a0fa53c1438f3a5c2cf9a8f5e1d6c8e4624fccd1394047dd418c0e969d4e"
+      "size": 111154239,
+      "md5": "3ffc36a75d8a4230ceeb5dea188b3f86",
+      "sha256": "3f1bacc574c3a3b68a8be3a0e833eadef673592cd35f157d59147cc1069a6c99"
     },
     {
       "name": "Jotted-win-x64-portable.exe",
       "platform": "Windows",
       "label": "Portable (.exe)",
-      "size": 110995228,
-      "md5": "34fdc59823f4e6ccd334da87671d9175",
-      "sha256": "3b05de20d7b3707d5ad61c8322651084091651114043bd257b5d0bf9884aa147"
+      "size": 110996017,
+      "md5": "e3b9aa08a8284cf6714f9afcef9ce574",
+      "sha256": "dc26f4d52d58e414862d75ef75c78b38107b2688d367673af9f3f3e008d3484e"
     },
     {
       "name": "Jotted-linux-x86_64.AppImage",
       "platform": "Linux",
       "label": "AppImage",
-      "size": 126043784,
-      "md5": "438f62e27ccd4ad021024980d2e0eb15",
-      "sha256": "6ed934cb964a28905b54036da927bbaf3b97598f0b079b22bd55db704d416c18"
+      "size": 126047941,
+      "md5": "2a014cba891402e6720c4b44a43d8b59",
+      "sha256": "690eb0b9f510c59483a7860cc6c351174f74b9d3fb67eab2c989abfd3ba7e86e"
     }
   ]
 }

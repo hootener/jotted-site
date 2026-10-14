@@ -1,12 +1,12 @@
 // Jot editor: full-screen pen canvas with pan/zoom, undo, autosave.
-import { View, fitCanvas, beginFrame, drawStrokes, drawStroke, drawImages, drawRedactions, drawShapes, drawPaper, createImageCache, PAPER_MODES } from './canvas.js?v=c63f95468c';
-import { normalizeRect, pointInRect } from './redact.js?v=c63f95468c';
-import { hitTestShape, moveShape, textLines, textLineHeight, TEXT_FONT, TEXT_SIZES } from './shapes.js?v=c63f95468c';
-import { fitPlacement, pointInImage, imageId, blobToImageData } from './images.js?v=c63f95468c';
-import { createSmoother, simulatePressure, hitTestStroke, PEN_SIZES } from './stroke.js?v=c63f95468c';
-import { PALETTE, colorForTheme } from './palette.js?v=c63f95468c';
-import { jotToSVG, jotToPNG, downloadBlob, bakeRedactions } from './export.js?v=c63f95468c';
-import { cleanName, defaultName } from './names.js?v=c63f95468c';
+import { View, fitCanvas, beginFrame, drawStrokes, drawStroke, drawImages, drawRedactions, drawShapes, drawPaper, createImageCache, PAPER_MODES } from './canvas.js?v=610e028977';
+import { normalizeRect, pointInRect } from './redact.js?v=610e028977';
+import { hitTestShape, moveShape, shapeBounds, textLines, textLineHeight, TEXT_FONT, TEXT_SIZES } from './shapes.js?v=610e028977';
+import { fitPlacement, pointInImage, imageId, blobToImageData } from './images.js?v=610e028977';
+import { createSmoother, simulatePressure, hitTestStroke, PEN_SIZES } from './stroke.js?v=610e028977';
+import { PALETTE, colorForTheme } from './palette.js?v=610e028977';
+import { jotToSVG, jotToPNG, downloadBlob, bakeRedactions } from './export.js?v=610e028977';
+import { cleanName, defaultName } from './names.js?v=610e028977';
 
 const SAVE_DELAY_MS = 400;
 // Platform convention: Cmd on macOS, Ctrl elsewhere.
@@ -25,6 +25,7 @@ export function mountEditor(root, store, jot) {
   //        | { type: 'redact', redaction } | { type: 'unredact', redaction, index }
   //        | { type: 'shape', shape } | { type: 'removeShape', shape, index }
   //        | { type: 'moveShape', shape, dx, dy } | { type: 'editText', shape, before, after }
+  //        | { type: 'moveImage', image, dx, dy }
   const undoStack = [];
   const redoStack = [];
   let color = prefs.color;
@@ -58,6 +59,7 @@ export function mountEditor(root, store, jot) {
           </div>
           <span class="divider"></span>
           <div class="group shapes" role="group" aria-label="Annotations">
+            <button class="btn icon shape-btn" data-tool="select" title="Select and move (V)" aria-pressed="false">↖</button>
             <button class="btn icon shape-btn" data-tool="rect" title="Box (B)" aria-pressed="false">▢</button>
             <button class="btn icon shape-btn" data-tool="arrow" title="Arrow (A)" aria-pressed="false">➚</button>
             <button class="btn icon shape-btn" data-tool="text" title="Text (T)" aria-pressed="false">T</button>
@@ -90,6 +92,7 @@ export function mountEditor(root, store, jot) {
                 <button class="btn" data-more="paper" role="menuitem">Paper</button>
                 <button class="btn" data-more="theme" role="menuitem">Light canvas</button>
                 <button class="btn" data-more="add" role="menuitem">Add image or PDF…</button>
+                <button class="btn" data-more="select" role="menuitem">Select / move</button>
                 <button class="btn" data-more="rect" role="menuitem">Box</button>
                 <button class="btn" data-more="arrow" role="menuitem">Arrow</button>
                 <button class="btn" data-more="text" role="menuitem">Text</button>
@@ -195,7 +198,7 @@ export function mountEditor(root, store, jot) {
       closePopovers();
       if (what === 'theme') setTheme(jot.theme === 'light' ? 'dark' : 'light');
       else if (what === 'add') fileInput.click();
-      else if (what === 'redact' || what === 'rect' || what === 'arrow' || what === 'text') setTool(tool === what ? 'pen' : what);
+      else if (['redact', 'rect', 'arrow', 'text', 'select'].includes(what)) setTool(tool === what ? 'pen' : what);
       else if (what === 'png' || what === 'svg') exportJot(what);
       else if (what === 'clear') clearJot();
     });
@@ -231,11 +234,13 @@ export function mountEditor(root, store, jot) {
     onViewChanged();
   });
 
-  let tool = 'pen'; // 'pen' | 'eraser' | 'redact' | 'rect' | 'arrow' | 'text'
+  let tool = 'pen'; // 'pen' | 'eraser' | 'redact' | 'rect' | 'arrow' | 'text' | 'select'
   const SHAPE_TOOLS = ['rect', 'arrow', 'text'];
   function setTool(next) {
     if (tool === 'text' && next !== 'text') commitTextEdit();
+    if (next !== 'select') setSelected(null);
     tool = next;
+    el.classList.toggle('select-mode', tool === 'select');
     const erasing = tool === 'eraser';
     el.classList.toggle('erasing-mode', erasing);
     el.classList.toggle('redact-mode', tool === 'redact');
@@ -317,7 +322,7 @@ export function mountEditor(root, store, jot) {
       try {
         if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) {
           showToast('Rendering PDF…');
-          const { renderPdfPages, MAX_PAGES } = await import('./pdf.js?v=c63f95468c');
+          const { renderPdfPages, MAX_PAGES } = await import('./pdf.js?v=610e028977');
           const { pages, total } = await renderPdfPages(file, (i, n) => showToast(`Rendering page ${i} of ${n}…`));
           if (pages.length) placeStack(pages);
           showToast(total > MAX_PAGES ? `Added first ${MAX_PAGES} of ${total} pages` : `Added ${pages.length} page${pages.length === 1 ? '' : 's'}`);
@@ -490,6 +495,7 @@ export function mountEditor(root, store, jot) {
       beginFrame(liveCtx, view, dpr);
       if (current) drawStroke(liveCtx, current.stroke, jot.theme);
       if (shaping?.draft) drawShapes(liveCtx, [shaping.draft], jot.theme);
+      if (selected) drawSelection(liveCtx);
       if (redacting) {
         const r = normalizeRect(redacting.x0, redacting.y0, redacting.x1, redacting.y1);
         liveCtx.save();
@@ -555,6 +561,7 @@ export function mountEditor(root, store, jot) {
     else if (action.type === 'removeShape') shapes.splice(action.index, 0, action.shape);
     else if (action.type === 'moveShape') moveShape(action.shape, -action.dx, -action.dy);
     else if (action.type === 'editText') Object.assign(action.shape, action.before);
+    else if (action.type === 'moveImage') { action.image.x = round(action.image.x - action.dx, 2); action.image.y = round(action.image.y - action.dy, 2); }
     redoStack.push(action);
     afterHistoryChange();
   }
@@ -574,6 +581,7 @@ export function mountEditor(root, store, jot) {
     else if (action.type === 'removeShape') shapes.splice(shapes.indexOf(action.shape), 1);
     else if (action.type === 'moveShape') moveShape(action.shape, action.dx, action.dy);
     else if (action.type === 'editText') Object.assign(action.shape, action.after);
+    else if (action.type === 'moveImage') { action.image.x = round(action.image.x + action.dx, 2); action.image.y = round(action.image.y + action.dy, 2); }
     undoStack.push(action);
     afterHistoryChange();
   }
@@ -611,6 +619,8 @@ export function mountEditor(root, store, jot) {
     commit({ type: 'clear', strokes: strokes.splice(0, strokes.length), images: images.splice(0, images.length), redactions: redactions.splice(0, redactions.length), shapes: shapes.splice(0, shapes.length) });
   }
   function afterHistoryChange() {
+    if (selected && !(selected.kind === 'image' ? images : shapes).includes(selected.item)) selected = null;
+    liveDirty = true;
     baseDirty = true;
     requestRender();
     updateHistoryButtons();
@@ -695,6 +705,92 @@ export function mountEditor(root, store, jot) {
     mousePan = { pointerId: e.pointerId, x: e.clientX, y: e.clientY };
     capture(e.pointerId);
     el.classList.add('panning');
+  }
+
+  // ---- Select / move (pointer tool) ----------------------------------------
+  let selected = null; // { kind: 'shape' | 'image', item }
+  let selecting = null; // drag in progress: { pointerId, x0, y0, sx, sy, dx, dy, moved }
+
+  function setSelected(sel) {
+    selected = sel;
+    liveDirty = true;
+    requestRender();
+  }
+  function selectionBounds() {
+    if (!selected) return null;
+    if (selected.kind === 'image') {
+      const im = selected.item;
+      return { minX: im.x, minY: im.y, maxX: im.x + im.w, maxY: im.y + im.h };
+    }
+    return shapeBounds(selected.item);
+  }
+  function itemAt(wx, wy) {
+    const shape = shapeAt(wx, wy, null);
+    if (shape) return { kind: 'shape', item: shape };
+    for (let i = images.length - 1; i >= 0; i--) {
+      if (pointInImage(images[i], wx, wy)) return { kind: 'image', item: images[i] };
+    }
+    return null;
+  }
+  function moveItem(sel, dx, dy) {
+    if (sel.kind === 'image') { sel.item.x = round(sel.item.x + dx, 2); sel.item.y = round(sel.item.y + dy, 2); }
+    else moveShape(sel.item, dx, dy);
+  }
+  function beginSelect(e) {
+    const [wx, wy] = view.screenToWorld(e.clientX, e.clientY);
+    const hit = itemAt(wx, wy);
+    setSelected(hit);
+    if (!hit) return;
+    capture(e.pointerId);
+    selecting = { pointerId: e.pointerId, x0: wx, y0: wy, sx: e.clientX, sy: e.clientY, dx: 0, dy: 0, moved: false };
+  }
+  function moveSelect(e) {
+    const [wx, wy] = view.screenToWorld(e.clientX, e.clientY);
+    const dx = wx - selecting.x0, dy = wy - selecting.y0;
+    moveItem(selected, dx, dy);
+    selecting.dx += dx; selecting.dy += dy;
+    selecting.x0 = wx; selecting.y0 = wy;
+    if (Math.hypot(e.clientX - selecting.sx, e.clientY - selecting.sy) > 4) selecting.moved = true;
+    baseDirty = true;
+    liveDirty = true;
+    requestRender();
+  }
+  function endSelect() {
+    const sel = selecting;
+    selecting = null;
+    if (!sel || !selected) return;
+    if (sel.moved) {
+      if (selected.kind === 'image') commit({ type: 'moveImage', image: selected.item, dx: sel.dx, dy: sel.dy });
+      else commit({ type: 'moveShape', shape: selected.item, dx: sel.dx, dy: sel.dy });
+    } else if (selected.kind === 'shape' && selected.item.type === 'text' && sel.dblclick) {
+      openTextEditor(selected.item);
+    }
+  }
+  function deleteSelected() {
+    if (!selected) return false;
+    const sel = selected;
+    setSelected(null);
+    if (sel.kind === 'image') {
+      const index = images.indexOf(sel.item);
+      images.splice(index, 1);
+      commit({ type: 'removeImage', image: sel.item, index });
+    } else {
+      const index = shapes.indexOf(sel.item);
+      shapes.splice(index, 1);
+      commit({ type: 'removeShape', shape: sel.item, index });
+    }
+    return true;
+  }
+  function drawSelection(ctx) {
+    const b = selectionBounds();
+    if (!b) return;
+    const pad = 6 / view.scale;
+    ctx.save();
+    ctx.setLineDash([6 / view.scale, 4 / view.scale]);
+    ctx.lineWidth = 1.5 / view.scale;
+    ctx.strokeStyle = jot.theme === 'light' ? '#1c7fd6' : '#7fd4ff';
+    ctx.strokeRect(b.minX - pad, b.minY - pad, b.maxX - b.minX + pad * 2, b.maxY - b.minY + pad * 2);
+    ctx.restore();
   }
 
   // ---- Boxes, arrows, text -----------------------------------------------
@@ -945,7 +1041,17 @@ export function mountEditor(root, store, jot) {
 
   function onPointerDown(e) {
     closePopovers();
-    if (erasing || redacting || shaping) return;
+    if (erasing || redacting || shaping || selecting) return;
+    if (tool === 'select' && !current && !mousePan && e.button === 0 && !e.altKey) {
+      if (e.pointerType === 'touch') {
+        touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (touches.size > 1) return;
+      }
+      e.preventDefault();
+      beginSelect(e);
+      if (selecting) selecting.dblclick = e.detail === 2;
+      return;
+    }
     if (SHAPE_TOOLS.includes(tool) && !current && !mousePan && e.button === 0 && !e.altKey) {
       if (e.pointerType === 'touch') {
         touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -1005,6 +1111,10 @@ export function mountEditor(root, store, jot) {
   }
 
   function onPointerMove(e) {
+    if (selecting && e.pointerId === selecting.pointerId) {
+      moveSelect(e);
+      return;
+    }
     if (shaping && e.pointerId === shaping.pointerId) {
       moveShapeDrag(e);
       return;
@@ -1048,6 +1158,10 @@ export function mountEditor(root, store, jot) {
 
   function onPointerUp(e) {
     touches.delete(e.pointerId);
+    if (selecting && e.pointerId === selecting.pointerId) {
+      endSelect();
+      return;
+    }
     if (shaping && e.pointerId === shaping.pointerId) {
       endShape(e, e.type === 'pointercancel');
       return;
@@ -1107,6 +1221,8 @@ export function mountEditor(root, store, jot) {
       setTool(tool === 'eraser' ? 'pen' : 'eraser');
     } else if (e.key.toLowerCase() === 'r' && !mod) {
       setTool(tool === 'redact' ? 'pen' : 'redact');
+    } else if (e.key.toLowerCase() === 'v' && !mod) {
+      setTool(tool === 'select' ? 'pen' : 'select');
     } else if (e.key.toLowerCase() === 'b' && !mod) {
       setTool(tool === 'rect' ? 'pen' : 'rect');
     } else if (e.key.toLowerCase() === 'a' && !mod) {
@@ -1129,7 +1245,7 @@ export function mountEditor(root, store, jot) {
       cyclePaper(e.shiftKey ? -1 : 1);
     } else if (e.key === 'Delete' || e.key === 'Backspace') {
       e.preventDefault();
-      clearJot();
+      if (!deleteSelected()) clearJot();
     } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
       e.preventDefault();
       stepSize(e.key === 'ArrowUp' ? 1 : -1);
@@ -1137,7 +1253,8 @@ export function mountEditor(root, store, jot) {
       view.reset();
       onViewChanged();
     } else if (e.key === 'Escape') {
-      if (tool !== 'pen') setTool('pen');
+      if (selected) setSelected(null);
+      else if (tool !== 'pen') setTool('pen');
       else location.hash = '#/';
     }
   }

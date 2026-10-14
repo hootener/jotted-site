@@ -1,5 +1,5 @@
 // Home page: list of saved jots.
-import { renderThumbnail, createImageCache } from './canvas.js?v=c63f95468c';
+import { renderThumbnail, createImageCache } from './canvas.js?v=610e028977';
 
 export function mountList(root, store, jots) {
   root.innerHTML = `

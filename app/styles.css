@@ -81,6 +81,7 @@ html, body {
 .editor[data-theme="light"] .save-state.error { color: #c0392b; }
 .editor.erasing-mode .layer.live, .editor.erasing .layer.live { cursor: cell; }
 .editor.redact-mode .layer.live, .editor.shape-mode .layer.live { cursor: crosshair; }
+.editor.select-mode .layer.live { cursor: default; }
 .shape-btn[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
 .shape-btn[data-tool="text"] { font-weight: 700; font-family: inherit; }
 .text-editor {
