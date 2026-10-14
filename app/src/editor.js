@@ -1,12 +1,12 @@
 // Jot editor: full-screen pen canvas with pan/zoom, undo, autosave.
-import { View, fitCanvas, beginFrame, drawStrokes, drawStroke, drawImages, drawRedactions, drawShapes, drawPaper, createImageCache, PAPER_MODES } from './canvas.js?v=610e028977';
-import { normalizeRect, pointInRect } from './redact.js?v=610e028977';
-import { hitTestShape, moveShape, shapeBounds, textLines, textLineHeight, TEXT_FONT, TEXT_SIZES } from './shapes.js?v=610e028977';
-import { fitPlacement, pointInImage, imageId, blobToImageData } from './images.js?v=610e028977';
-import { createSmoother, simulatePressure, hitTestStroke, PEN_SIZES } from './stroke.js?v=610e028977';
-import { PALETTE, colorForTheme } from './palette.js?v=610e028977';
-import { jotToSVG, jotToPNG, downloadBlob, bakeRedactions } from './export.js?v=610e028977';
-import { cleanName, defaultName } from './names.js?v=610e028977';
+import { View, fitCanvas, beginFrame, drawStrokes, drawStroke, drawImages, drawRedactions, drawShapes, drawPaper, createImageCache, PAPER_MODES } from './canvas.js?v=787f50972a';
+import { normalizeRect, pointInRect } from './redact.js?v=787f50972a';
+import { hitTestShape, moveShape, shapeBounds, textLines, textLineHeight, TEXT_FONT, TEXT_SIZES } from './shapes.js?v=787f50972a';
+import { fitPlacement, pointInImage, imageId, blobToImageData } from './images.js?v=787f50972a';
+import { createSmoother, simulatePressure, hitTestStroke, strokeBounds, PEN_SIZES } from './stroke.js?v=787f50972a';
+import { PALETTE, colorForTheme } from './palette.js?v=787f50972a';
+import { jotToSVG, jotToPNG, downloadBlob, bakeRedactions } from './export.js?v=787f50972a';
+import { cleanName, defaultName } from './names.js?v=787f50972a';
 
 const SAVE_DELAY_MS = 400;
 // Platform convention: Cmd on macOS, Ctrl elsewhere.
@@ -25,7 +25,7 @@ export function mountEditor(root, store, jot) {
   //        | { type: 'redact', redaction } | { type: 'unredact', redaction, index }
   //        | { type: 'shape', shape } | { type: 'removeShape', shape, index }
   //        | { type: 'moveShape', shape, dx, dy } | { type: 'editText', shape, before, after }
-  //        | { type: 'moveImage', image, dx, dy }
+  //        | { type: 'moveItem', sel: { kind, item }, dx, dy }
   const undoStack = [];
   const redoStack = [];
   let color = prefs.color;
@@ -59,9 +59,9 @@ export function mountEditor(root, store, jot) {
           </div>
           <span class="divider"></span>
           <div class="group shapes" role="group" aria-label="Annotations">
-            <button class="btn icon shape-btn" data-tool="select" title="Select and move (V)" aria-pressed="false">↖</button>
+            <button class="btn icon shape-btn" data-tool="select" title="Select and move (V)" aria-pressed="false"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 1.5l9.5 8.2-4.2.6 2.4 4.4-1.8 1-2.4-4.5L3 14z" fill="currentColor" stroke="currentColor" stroke-width="0.6" stroke-linejoin="round"/></svg></button>
             <button class="btn icon shape-btn" data-tool="rect" title="Box (B)" aria-pressed="false">▢</button>
-            <button class="btn icon shape-btn" data-tool="arrow" title="Arrow (A)" aria-pressed="false">➚</button>
+            <button class="btn icon shape-btn" data-tool="arrow" title="Arrow (A)" aria-pressed="false"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 13.5L10.8 5.2M13.5 2.5l-1 5.2-4.2-4.2z" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
             <button class="btn icon shape-btn" data-tool="text" title="Text (T)" aria-pressed="false">T</button>
           </div>
           <span class="divider"></span>
@@ -322,7 +322,7 @@ export function mountEditor(root, store, jot) {
       try {
         if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) {
           showToast('Rendering PDF…');
-          const { renderPdfPages, MAX_PAGES } = await import('./pdf.js?v=610e028977');
+          const { renderPdfPages, MAX_PAGES } = await import('./pdf.js?v=787f50972a');
           const { pages, total } = await renderPdfPages(file, (i, n) => showToast(`Rendering page ${i} of ${n}…`));
           if (pages.length) placeStack(pages);
           showToast(total > MAX_PAGES ? `Added first ${MAX_PAGES} of ${total} pages` : `Added ${pages.length} page${pages.length === 1 ? '' : 's'}`);
@@ -561,7 +561,7 @@ export function mountEditor(root, store, jot) {
     else if (action.type === 'removeShape') shapes.splice(action.index, 0, action.shape);
     else if (action.type === 'moveShape') moveShape(action.shape, -action.dx, -action.dy);
     else if (action.type === 'editText') Object.assign(action.shape, action.before);
-    else if (action.type === 'moveImage') { action.image.x = round(action.image.x - action.dx, 2); action.image.y = round(action.image.y - action.dy, 2); }
+    else if (action.type === 'moveItem') moveItem(action.sel, -action.dx, -action.dy);
     redoStack.push(action);
     afterHistoryChange();
   }
@@ -581,7 +581,7 @@ export function mountEditor(root, store, jot) {
     else if (action.type === 'removeShape') shapes.splice(shapes.indexOf(action.shape), 1);
     else if (action.type === 'moveShape') moveShape(action.shape, action.dx, action.dy);
     else if (action.type === 'editText') Object.assign(action.shape, action.after);
-    else if (action.type === 'moveImage') { action.image.x = round(action.image.x + action.dx, 2); action.image.y = round(action.image.y + action.dy, 2); }
+    else if (action.type === 'moveItem') moveItem(action.sel, action.dx, action.dy);
     undoStack.push(action);
     afterHistoryChange();
   }
@@ -619,7 +619,10 @@ export function mountEditor(root, store, jot) {
     commit({ type: 'clear', strokes: strokes.splice(0, strokes.length), images: images.splice(0, images.length), redactions: redactions.splice(0, redactions.length), shapes: shapes.splice(0, shapes.length) });
   }
   function afterHistoryChange() {
-    if (selected && !(selected.kind === 'image' ? images : shapes).includes(selected.item)) selected = null;
+    if (selected) {
+      const list = { image: images, shape: shapes, stroke: strokes, redaction: redactions }[selected.kind];
+      if (!list.includes(selected.item)) selected = null;
+    }
     liveDirty = true;
     baseDirty = true;
     requestRender();
@@ -708,7 +711,7 @@ export function mountEditor(root, store, jot) {
   }
 
   // ---- Select / move (pointer tool) ----------------------------------------
-  let selected = null; // { kind: 'shape' | 'image', item }
+  let selected = null; // { kind: 'shape' | 'stroke' | 'redaction' | 'image', item }
   let selecting = null; // drag in progress: { pointerId, x0, y0, sx, sy, dx, dy, moved }
 
   function setSelected(sel) {
@@ -718,23 +721,37 @@ export function mountEditor(root, store, jot) {
   }
   function selectionBounds() {
     if (!selected) return null;
-    if (selected.kind === 'image') {
-      const im = selected.item;
-      return { minX: im.x, minY: im.y, maxX: im.x + im.w, maxY: im.y + im.h };
+    const it = selected.item;
+    if (selected.kind === 'image' || selected.kind === 'redaction') {
+      return { minX: it.x, minY: it.y, maxX: it.x + it.w, maxY: it.y + it.h };
     }
-    return shapeBounds(selected.item);
+    if (selected.kind === 'stroke') return strokeBounds(it);
+    return shapeBounds(it);
   }
+  /** Topmost thing under the pointer: shapes, then ink, then pixelation, then images. */
   function itemAt(wx, wy) {
     const shape = shapeAt(wx, wy, null);
     if (shape) return { kind: 'shape', item: shape };
+    const tol = 6 / view.scale;
+    for (let i = strokes.length - 1; i >= 0; i--) {
+      if (hitTestStroke(strokes[i], wx, wy, tol)) return { kind: 'stroke', item: strokes[i] };
+    }
+    for (let i = redactions.length - 1; i >= 0; i--) {
+      if (pointInRect(redactions[i], wx, wy)) return { kind: 'redaction', item: redactions[i] };
+    }
     for (let i = images.length - 1; i >= 0; i--) {
       if (pointInImage(images[i], wx, wy)) return { kind: 'image', item: images[i] };
     }
     return null;
   }
+  function shiftStroke(stroke, dx, dy) {
+    for (const p of stroke.points) { p[0] = round(p[0] + dx, 2); p[1] = round(p[1] + dy, 2); }
+  }
   function moveItem(sel, dx, dy) {
-    if (sel.kind === 'image') { sel.item.x = round(sel.item.x + dx, 2); sel.item.y = round(sel.item.y + dy, 2); }
-    else moveShape(sel.item, dx, dy);
+    const it = sel.item;
+    if (sel.kind === 'image' || sel.kind === 'redaction') { it.x = round(it.x + dx, 2); it.y = round(it.y + dy, 2); }
+    else if (sel.kind === 'stroke') shiftStroke(it, dx, dy);
+    else moveShape(it, dx, dy);
   }
   function beginSelect(e) {
     const [wx, wy] = view.screenToWorld(e.clientX, e.clientY);
@@ -760,8 +777,7 @@ export function mountEditor(root, store, jot) {
     selecting = null;
     if (!sel || !selected) return;
     if (sel.moved) {
-      if (selected.kind === 'image') commit({ type: 'moveImage', image: selected.item, dx: sel.dx, dy: sel.dy });
-      else commit({ type: 'moveShape', shape: selected.item, dx: sel.dx, dy: sel.dy });
+      commit({ type: 'moveItem', sel: selected, dx: sel.dx, dy: sel.dy });
     } else if (selected.kind === 'shape' && selected.item.type === 'text' && sel.dblclick) {
       openTextEditor(selected.item);
     }
@@ -774,6 +790,14 @@ export function mountEditor(root, store, jot) {
       const index = images.indexOf(sel.item);
       images.splice(index, 1);
       commit({ type: 'removeImage', image: sel.item, index });
+    } else if (sel.kind === 'stroke') {
+      const index = strokes.indexOf(sel.item);
+      strokes.splice(index, 1);
+      commit({ type: 'erase', items: [{ index, stroke: sel.item }] });
+    } else if (sel.kind === 'redaction') {
+      const index = redactions.indexOf(sel.item);
+      redactions.splice(index, 1);
+      commit({ type: 'unredact', redaction: sel.item, index });
     } else {
       const index = shapes.indexOf(sel.item);
       shapes.splice(index, 1);

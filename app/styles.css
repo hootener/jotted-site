@@ -84,6 +84,7 @@ html, body {
 .editor.select-mode .layer.live { cursor: default; }
 .shape-btn[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
 .shape-btn[data-tool="text"] { font-weight: 700; font-family: inherit; }
+.shape-btn svg { display: block; }
 .text-editor {
   position: absolute;
   z-index: 6;
