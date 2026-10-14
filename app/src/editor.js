@@ -1,12 +1,12 @@
 // Jot editor: full-screen pen canvas with pan/zoom, undo, autosave.
-import { View, fitCanvas, beginFrame, drawStrokes, drawStroke, drawImages, drawRedactions, drawShapes, drawPaper, createImageCache, PAPER_MODES } from './canvas.js?v=787f50972a';
-import { normalizeRect, pointInRect } from './redact.js?v=787f50972a';
-import { hitTestShape, moveShape, shapeBounds, textLines, textLineHeight, TEXT_FONT, TEXT_SIZES } from './shapes.js?v=787f50972a';
-import { fitPlacement, pointInImage, imageId, blobToImageData } from './images.js?v=787f50972a';
-import { createSmoother, simulatePressure, hitTestStroke, strokeBounds, PEN_SIZES } from './stroke.js?v=787f50972a';
-import { PALETTE, colorForTheme } from './palette.js?v=787f50972a';
-import { jotToSVG, jotToPNG, downloadBlob, bakeRedactions } from './export.js?v=787f50972a';
-import { cleanName, defaultName } from './names.js?v=787f50972a';
+import { View, fitCanvas, beginFrame, drawStrokes, drawStroke, drawImages, drawRedactions, drawShapes, drawPaper, createImageCache, PAPER_MODES } from './canvas.js?v=2457eabff9';
+import { normalizeRect, pointInRect } from './redact.js?v=2457eabff9';
+import { hitTestShape, moveShape, shapeBounds, textLines, textLineHeight, TEXT_FONT, TEXT_SIZES } from './shapes.js?v=2457eabff9';
+import { fitPlacement, pointInImage, imageId, blobToImageData } from './images.js?v=2457eabff9';
+import { createSmoother, simulatePressure, hitTestStroke, strokeBounds, PEN_SIZES } from './stroke.js?v=2457eabff9';
+import { PALETTE, colorForTheme } from './palette.js?v=2457eabff9';
+import { jotToSVG, jotToPNG, downloadBlob, bakeRedactions } from './export.js?v=2457eabff9';
+import { cleanName, defaultName } from './names.js?v=2457eabff9';
 
 const SAVE_DELAY_MS = 400;
 // Platform convention: Cmd on macOS, Ctrl elsewhere.
@@ -49,26 +49,30 @@ export function mountEditor(root, store, jot) {
             <button class="btn icon pick pick-color" title="Color" aria-haspopup="true" aria-expanded="false"><span class="dot"></span></button>
             <div class="swatches popover" role="radiogroup" aria-label="Pen color"></div>
           </div>
-          <span class="divider"></span>
-          <div class="group tools">
+          <div class="group sizes-group">
             <button class="btn icon pick pick-size" title="Pen size" aria-haspopup="true" aria-expanded="false"><span class="dot"></span></button>
             <div class="sizes popover" role="radiogroup" aria-label="Pen size"></div>
-            <span class="divider"></span>
-            <button class="btn icon undo" title="Undo (${MOD_LABEL}Z)" aria-label="Undo">↶</button>
-            <button class="btn icon redo" title="Redo (Shift+${MOD_LABEL}Z)" aria-label="Redo">↷</button>
           </div>
           <span class="divider"></span>
           <div class="group shapes" role="group" aria-label="Annotations">
+            <button class="btn icon pick pick-annot" title="Box, arrow, text, pixelate" aria-haspopup="true" aria-expanded="false" aria-pressed="false"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><rect x="2.5" y="2.5" width="11" height="11" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></button>
+            <div class="annot-menu popover" role="menu">
+              <button class="btn icon shape-btn" data-tool="rect" title="Box (B)" aria-pressed="false"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><rect x="2.5" y="2.5" width="11" height="11" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></button>
+              <button class="btn icon shape-btn" data-tool="arrow" title="Arrow (A)" aria-pressed="false"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 13.5L10.8 5.2M13.5 2.5l-1 5.2-4.2-4.2z" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+              <button class="btn icon shape-btn" data-tool="text" title="Text (T)" aria-pressed="false"><span class="glyph-t" aria-hidden="true">T</span></button>
+              <button class="btn icon shape-btn" data-tool="redact" title="Pixelate: drag a box over an image (R)" aria-pressed="false"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><rect x="2" y="2" width="5" height="5" fill="currentColor"/><rect x="9" y="2" width="5" height="5" fill="currentColor" opacity=".55"/><rect x="2" y="9" width="5" height="5" fill="currentColor" opacity=".55"/><rect x="9" y="9" width="5" height="5" fill="currentColor"/></svg></button>
+            </div>
             <button class="btn icon shape-btn" data-tool="select" title="Select and move (V)" aria-pressed="false"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 1.5l9.5 8.2-4.2.6 2.4 4.4-1.8 1-2.4-4.5L3 14z" fill="currentColor" stroke="currentColor" stroke-width="0.6" stroke-linejoin="round"/></svg></button>
-            <button class="btn icon shape-btn" data-tool="rect" title="Box (B)" aria-pressed="false">▢</button>
-            <button class="btn icon shape-btn" data-tool="arrow" title="Arrow (A)" aria-pressed="false"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 13.5L10.8 5.2M13.5 2.5l-1 5.2-4.2-4.2z" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-            <button class="btn icon shape-btn" data-tool="text" title="Text (T)" aria-pressed="false">T</button>
+          </div>
+          <span class="divider"></span>
+          <div class="group history">
+            <button class="btn icon undo" title="Undo (${MOD_LABEL}Z)" aria-label="Undo">↶</button>
+            <button class="btn icon redo" title="Redo (Shift+${MOD_LABEL}Z)" aria-label="Redo">↷</button>
           </div>
           <span class="divider"></span>
           <div class="group actions">
             <button class="btn paper-btn" title="Paper: none / grid / lines / dots (G)"></button>
             <button class="btn icon theme-btn" title="Light / dark canvas (L)" aria-label="Toggle light canvas"></button>
-            <button class="btn redact-btn" title="Pixelate: drag a box over an image (R)" aria-pressed="false">Pixelate</button>
             <div class="add-wrap">
               <button class="btn add-btn" title="Add an image, PDF or web page" aria-haspopup="true" aria-expanded="false">Add</button>
               <div class="add-menu popover" role="menu">
@@ -92,11 +96,6 @@ export function mountEditor(root, store, jot) {
                 <button class="btn" data-more="paper" role="menuitem">Paper</button>
                 <button class="btn" data-more="theme" role="menuitem">Light canvas</button>
                 <button class="btn" data-more="add" role="menuitem">Add image or PDF…</button>
-                <button class="btn" data-more="select" role="menuitem">Select / move</button>
-                <button class="btn" data-more="rect" role="menuitem">Box</button>
-                <button class="btn" data-more="arrow" role="menuitem">Arrow</button>
-                <button class="btn" data-more="text" role="menuitem">Text</button>
-                <button class="btn" data-more="redact" role="menuitem">Pixelate an area</button>
                 <button class="btn" data-more="png" role="menuitem">Export PNG</button>
                 <button class="btn" data-more="svg" role="menuitem">Export SVG</button>
                 <button class="btn danger" data-more="clear" role="menuitem">Clear jot</button>
@@ -138,7 +137,8 @@ export function mountEditor(root, store, jot) {
   const exportBtn = el.querySelector('.export-btn');
   const exportWrap = el.querySelector('.export-wrap');
   const addBtn = el.querySelector('.add-btn');
-  const redactBtn = el.querySelector('.redact-btn');
+  const pickAnnot = el.querySelector('.pick-annot');
+  const annotWrap = pickAnnot.parentElement;
   const redactions = jot.redactions;
   const moreWrap = el.querySelector('.more-wrap');
   const moreBtn = el.querySelector('.more-btn');
@@ -184,10 +184,13 @@ export function mountEditor(root, store, jot) {
   themeBtn.addEventListener('click', () => setTheme(jot.theme === 'light' ? 'dark' : 'light'));
   exportBtn.addEventListener('click', () => togglePopover(exportWrap));
   addBtn.addEventListener('click', () => togglePopover(addWrap));
-  redactBtn.addEventListener('click', () => setTool(tool === 'redact' ? 'pen' : 'redact'));
   for (const b of el.querySelectorAll('.shape-btn')) {
-    b.addEventListener('click', () => setTool(tool === b.dataset.tool ? 'pen' : b.dataset.tool));
+    b.addEventListener('click', () => {
+      setTool(tool === b.dataset.tool ? 'pen' : b.dataset.tool);
+      closePopovers();
+    });
   }
+  pickAnnot.addEventListener('click', () => togglePopover(annotWrap));
   const shapes = jot.shapes;
   const textEditor = el.querySelector('.text-editor');
   moreBtn.addEventListener('click', () => togglePopover(moreWrap));
@@ -198,7 +201,7 @@ export function mountEditor(root, store, jot) {
       closePopovers();
       if (what === 'theme') setTheme(jot.theme === 'light' ? 'dark' : 'light');
       else if (what === 'add') fileInput.click();
-      else if (['redact', 'rect', 'arrow', 'text', 'select'].includes(what)) setTool(tool === what ? 'pen' : what);
+
       else if (what === 'png' || what === 'svg') exportJot(what);
       else if (what === 'clear') clearJot();
     });
@@ -245,8 +248,11 @@ export function mountEditor(root, store, jot) {
     el.classList.toggle('erasing-mode', erasing);
     el.classList.toggle('redact-mode', tool === 'redact');
     el.classList.toggle('shape-mode', SHAPE_TOOLS.includes(tool));
-    redactBtn.setAttribute('aria-pressed', String(tool === 'redact'));
     for (const b of el.querySelectorAll('.shape-btn')) b.setAttribute('aria-pressed', String(b.dataset.tool === tool));
+    // The mobile annotation picker shows the last-used annotation tool's icon.
+    const annotTools = ['rect', 'arrow', 'text', 'redact'];
+    if (annotTools.includes(tool)) pickAnnot.innerHTML = el.querySelector(`.annot-menu [data-tool="${tool}"]`).innerHTML;
+    pickAnnot.setAttribute('aria-pressed', String(annotTools.includes(tool)));
     eraserSwatch.setAttribute('aria-checked', String(erasing));
     for (const b of swatches.querySelectorAll('.swatch:not(.eraser-swatch)')) {
       b.setAttribute('aria-checked', String(!erasing && b.dataset.hex === color));
@@ -322,7 +328,7 @@ export function mountEditor(root, store, jot) {
       try {
         if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) {
           showToast('Rendering PDF…');
-          const { renderPdfPages, MAX_PAGES } = await import('./pdf.js?v=787f50972a');
+          const { renderPdfPages, MAX_PAGES } = await import('./pdf.js?v=2457eabff9');
           const { pages, total } = await renderPdfPages(file, (i, n) => showToast(`Rendering page ${i} of ${n}…`));
           if (pages.length) placeStack(pages);
           showToast(total > MAX_PAGES ? `Added first ${MAX_PAGES} of ${total} pages` : `Added ${pages.length} page${pages.length === 1 ? '' : 's'}`);
@@ -403,7 +409,7 @@ export function mountEditor(root, store, jot) {
   function closePopovers() {
     for (const g of el.querySelectorAll('.group.open, .export-wrap.open, .add-wrap.open, .more-wrap.open')) {
       g.classList.remove('open');
-      g.querySelector('.pick, .export-btn, .add-btn, .more-btn').setAttribute('aria-expanded', 'false');
+      g.querySelector('.pick, .export-btn, .add-btn, .more-btn')?.setAttribute('aria-expanded', 'false');
     }
   }
   pickColor.addEventListener('click', () => togglePopover(pickColor.parentElement));

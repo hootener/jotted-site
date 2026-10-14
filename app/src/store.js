@@ -4,8 +4,8 @@
 //   loadJot(id) -> Promise<jot | null>
 //   saveJot(jot) -> Promise<jot>
 //   deleteJot(id) -> Promise<void>
-import { ulid } from './ulid.js?v=787f50972a';
-import { defaultName } from './names.js?v=787f50972a';
+import { ulid } from './ulid.js?v=2457eabff9';
+import { defaultName } from './names.js?v=2457eabff9';
 
 const INDEX_KEY = 'jotted:index';
 const JOT_PREFIX = 'jotted:jot:';
@@ -48,7 +48,7 @@ export function normalizeJot(jot, id) {
 export async function createStore() {
   if (globalThis.jotted?.jots) return createBridgeStore(globalThis.jotted.jots);
   if (globalThis.indexedDB) {
-    const { createIndexedDBStore } = await import('./idbStore.js?v=787f50972a');
+    const { createIndexedDBStore } = await import('./idbStore.js?v=2457eabff9');
     return createIndexedDBStore(globalThis.localStorage);
   }
   return createLocalStorageStore(globalThis.localStorage);

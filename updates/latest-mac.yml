@@ -1,17 +1,17 @@
-version: 2026.1014.7
+version: 2026.1014.8
 files:
-  - url: https://github.com/hootener/jotted-site/releases/download/2026.10.14.007/Jotted-mac-x64.zip
-    sha512: sVg1fFYT7xY/oG5lPzcCqnEfgJRBXY8ZBTtXNzib09Wl7hCPGHl75DbcUvnjFzvvv23LcV47VqzfTfE8GfdQlQ==
-    size: 132664415
-  - url: https://github.com/hootener/jotted-site/releases/download/2026.10.14.007/Jotted-mac-arm64.zip
-    sha512: 70hLMFUm+lrw82jTKVbBaYnq4sN406ASkTqApKN+kcsSdyWkfLVKZs7Q9nbl09yJiq/9vTsa5l9MJZlrq4AT7g==
-    size: 128822964
-  - url: https://github.com/hootener/jotted-site/releases/download/2026.10.14.007/Jotted-mac-x64.dmg
-    sha512: OA/Q6s6iZlIweIJWOAEffZWDnXXmzU6VsQd15DYwKKaCEHwNbiDNWbIpUCZ57Mkp3eoElZCcaszJq4R01KEO5Q==
-    size: 132602058
-  - url: https://github.com/hootener/jotted-site/releases/download/2026.10.14.007/Jotted-mac-arm64.dmg
-    sha512: KgAaHALf76y63yxgeVWwzKqh8xIqQChcmgIfQYIR+mxvadWcl+g3cwq5gtg+6+L+VF9hlAP2uq4vhn5UD/+18w==
-    size: 128772379
-path: https://github.com/hootener/jotted-site/releases/download/2026.10.14.007/Jotted-mac-x64.zip
-sha512: sVg1fFYT7xY/oG5lPzcCqnEfgJRBXY8ZBTtXNzib09Wl7hCPGHl75DbcUvnjFzvvv23LcV47VqzfTfE8GfdQlQ==
-releaseDate: '2026-10-14T22:16:08.621Z'
+  - url: https://github.com/hootener/jotted-site/releases/download/2026.10.14.008/Jotted-mac-x64.zip
+    sha512: ayww6ykm0TYvF9Q78UYdnIDOZabfc8F07i7SNODyBdVGIaWhfRpyS0mYvE5ZwUCO5qzsdZOTTKZhppB93voGEw==
+    size: 132664491
+  - url: https://github.com/hootener/jotted-site/releases/download/2026.10.14.008/Jotted-mac-arm64.zip
+    sha512: CRgXKM47JhgEv08PP26geflRHsYc5JPDe/0OKHZW7Miv8ixKphyCuhAqeCtBq1DFH5T9uSkH0WwZT92/CvCELw==
+    size: 128823040
+  - url: https://github.com/hootener/jotted-site/releases/download/2026.10.14.008/Jotted-mac-x64.dmg
+    sha512: UXjXeYwOyY+BzV9MmPRdCC0c0HUM00i3OHIna5LFub5VOMqRuiy+Gt5qwZ/sATv8UeB1Po5vEd6eVr5BBAoTYg==
+    size: 132602005
+  - url: https://github.com/hootener/jotted-site/releases/download/2026.10.14.008/Jotted-mac-arm64.dmg
+    sha512: ehYEk8TezD5C0fjH6besc69kNmRiWm2BC4t5hPcidwPZoh8dQqcG3sUh9EyZO2H1irMUr/vKK2Eamg2Vl/s2xA==
+    size: 128772380
+path: https://github.com/hootener/jotted-site/releases/download/2026.10.14.008/Jotted-mac-x64.zip
+sha512: ayww6ykm0TYvF9Q78UYdnIDOZabfc8F07i7SNODyBdVGIaWhfRpyS0mYvE5ZwUCO5qzsdZOTTKZhppB93voGEw==
+releaseDate: '2026-10-14T22:22:23.015Z'

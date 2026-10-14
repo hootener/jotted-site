@@ -1,5 +1,5 @@
 // Box, arrow and text annotations. Pure geometry and SVG; drawing lives in canvas.js.
-import { colorForTheme, THEMES } from './palette.js?v=787f50972a';
+import { colorForTheme, THEMES } from './palette.js?v=2457eabff9';
 
 export const TEXT_FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
 export const TEXT_SIZES = { small: 18, medium: 24, large: 32, highlight: 32 };

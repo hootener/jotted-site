@@ -82,9 +82,11 @@ html, body {
 .editor.erasing-mode .layer.live, .editor.erasing .layer.live { cursor: cell; }
 .editor.redact-mode .layer.live, .editor.shape-mode .layer.live { cursor: crosshair; }
 .editor.select-mode .layer.live { cursor: default; }
-.shape-btn[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
-.shape-btn[data-tool="text"] { font-weight: 700; font-family: inherit; }
-.shape-btn svg { display: block; }
+.shape-btn[aria-pressed="true"], .pick-annot[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.glyph-t { font-weight: 700; font-size: 17px; line-height: 1; }
+.shape-btn svg, .pick-annot svg { display: block; }
+.annot-menu { display: flex; gap: 6px; }
+.btn.icon.pick-annot { display: none; }
 .text-editor {
   position: absolute;
   z-index: 6;
@@ -101,7 +103,6 @@ html, body {
   white-space: pre;
   transform: translate(-4px, 0);
 }
-.btn.redact-btn[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
 /* Eraser swatch and the mobile color button while erasing: a white disc
    with a red diagonal. */
 .eraser-swatch, .pick.erase .dot {
@@ -321,8 +322,8 @@ html, body {
 }
 .pick-size .dot { width: var(--d, 8px); height: var(--d, 8px); background: var(--fg); box-shadow: none; }
 
-/* Narrow screens (phones, anything under an iPad mini): the toolbar spans
-   the viewport in a single row; color and size become popover pickers. */
+/* Narrow screens (phones, anything under an iPad mini): one row —
+   color · size | annotation picker · pointer | undo · redo · ⋯ */
 @media (max-width: 743px) {
   .hud.bottom { padding: 0; }
   .toolbar {
@@ -332,12 +333,14 @@ html, body {
     border-left: 0;
     border-right: 0;
     border-bottom: 0;
-    padding: 8px 10px max(8px, env(safe-area-inset-bottom));
-    gap: 6px;
+    padding: 8px 8px max(8px, env(safe-area-inset-bottom));
+    gap: 4px;
   }
-  .toolbar > .divider, .group .divider { display: none; }
-  .group { position: relative; gap: 6px; }
-  .btn.icon.pick { display: grid; place-items: center; width: 44px; height: 44px; }
+  .toolbar > .divider { display: block; height: 26px; margin: 0 2px; }
+  .group { position: relative; gap: 4px; }
+  .group .divider { display: none; }
+  .btn.icon { width: 40px; height: 40px; font-size: 19px; }
+  .btn.icon.pick, .btn.icon.pick-annot { display: grid; place-items: center; width: 40px; height: 40px; }
   .popover {
     display: none;
     position: absolute;
@@ -353,35 +356,15 @@ html, body {
     -webkit-backdrop-filter: blur(14px);
   }
   .group.open > .popover { display: flex; }
+  .annot-menu .btn.icon { width: 44px; height: 44px; }
+  .group.shapes > .shape-btn:not([data-tool="select"]) { display: none; }
   .swatch { width: 38px; height: 38px; }
   .size { width: 42px; height: 42px; }
-  .btn.icon { width: 44px; height: 44px; font-size: 20px; }
-  /* Secondary actions fold into the ⋯ menu. */
-  .group.shapes { display: none; }
-  .group.actions > .paper-btn, .group.actions > .theme-btn, .group.actions > .add-wrap, .group.actions > .redact-btn,
-  .group.actions > .export-wrap, .group.actions > .clear { display: none; }
+  .group.actions > *:not(.more-wrap) { display: none; }
   .more-wrap { display: block; }
   .more-menu { left: auto; right: 0; }
-  .group.actions .divider { display: none; }
   .hud.top { gap: 6px; }
   .zoom { min-width: 48px; }
-}
-
-.update-banner {
-  position: fixed;
-  right: 16px;
-  bottom: 88px;
-  z-index: 20;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px 10px 16px;
-  background: var(--panel);
-  border: 1px solid var(--panel-border);
-  border-radius: 14px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
-  font-size: 14px;
-  color: var(--fg);
 }
 
 /* ---- Home ------------------------------------------------------------ */
