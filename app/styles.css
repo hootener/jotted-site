@@ -80,7 +80,25 @@ html, body {
 .editor[data-theme="light"] .save-state { color: #6a6a74; }
 .editor[data-theme="light"] .save-state.error { color: #c0392b; }
 .editor.erasing-mode .layer.live, .editor.erasing .layer.live { cursor: cell; }
-.editor.redact-mode .layer.live { cursor: crosshair; }
+.editor.redact-mode .layer.live, .editor.shape-mode .layer.live { cursor: crosshair; }
+.shape-btn[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.shape-btn[data-tool="text"] { font-weight: 700; font-family: inherit; }
+.text-editor {
+  position: absolute;
+  z-index: 6;
+  margin: 0;
+  padding: 0 4px;
+  border: 1px dashed var(--accent);
+  border-radius: 4px;
+  background: transparent;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-weight: 700;
+  resize: none;
+  overflow: hidden;
+  outline: none;
+  white-space: pre;
+  transform: translate(-4px, 0);
+}
 .btn.redact-btn[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
 /* Eraser swatch and the mobile color button while erasing: a white disc
    with a red diagonal. */
@@ -337,6 +355,7 @@ html, body {
   .size { width: 42px; height: 42px; }
   .btn.icon { width: 44px; height: 44px; font-size: 20px; }
   /* Secondary actions fold into the ⋯ menu. */
+  .group.shapes { display: none; }
   .group.actions > .paper-btn, .group.actions > .theme-btn, .group.actions > .add-wrap, .group.actions > .redact-btn,
   .group.actions > .export-wrap, .group.actions > .clear { display: none; }
   .more-wrap { display: block; }

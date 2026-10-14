@@ -1,8 +1,9 @@
 // View transform and canvas rendering helpers.
-import { strokeOutline, strokeBounds, outlineOptions, HIGHLIGHT_ALPHA } from './stroke.js?v=05cc7d9cb5';
-import { colorForTheme, THEMES } from './palette.js?v=05cc7d9cb5';
-import { imageBounds, loadImage } from './images.js?v=05cc7d9cb5';
-import { intersectRect, blockSizeFor, pixelateRegion } from './redact.js?v=05cc7d9cb5';
+import { strokeOutline, strokeBounds, outlineOptions, HIGHLIGHT_ALPHA } from './stroke.js?v=c63f95468c';
+import { colorForTheme, THEMES } from './palette.js?v=c63f95468c';
+import { imageBounds, loadImage } from './images.js?v=c63f95468c';
+import { intersectRect, blockSizeFor, pixelateRegion } from './redact.js?v=c63f95468c';
+import { arrowPolygon, rectStrokeWidth, textLines, textLineHeight, shapeBounds, TEXT_FONT } from './shapes.js?v=c63f95468c';
 
 export const MIN_SCALE = 0.1;
 export const MAX_SCALE = 16;
@@ -121,10 +122,11 @@ export function renderThumbnail(jot, width, height, cache = null) {
   ctx.fillStyle = THEMES[theme].bg;
   ctx.fillRect(0, 0, width, height);
   const images = jot.images ?? [];
-  if (jot.strokes.length === 0 && images.length === 0) return canvas;
+  const shapes = jot.shapes ?? [];
+  if (jot.strokes.length === 0 && images.length === 0 && shapes.length === 0) return canvas;
 
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (const b of [...jot.strokes.map(strokeBounds), ...images.map(imageBounds)]) {
+  for (const b of [...jot.strokes.map(strokeBounds), ...images.map(imageBounds), ...shapes.map(shapeBounds)]) {
     minX = Math.min(minX, b.minX);
     minY = Math.min(minY, b.minY);
     maxX = Math.max(maxX, b.maxX);
@@ -142,6 +144,7 @@ export function renderThumbnail(jot, width, height, cache = null) {
     }
     drawRedactions(ctx, images, jot.redactions ?? [], cache);
   }
+  drawShapes(ctx, jot.shapes ?? [], theme);
   for (const s of jot.strokes) drawStroke(ctx, s, theme);
   return canvas;
 }
@@ -269,6 +272,51 @@ export function drawRedactions(ctx, images, redactions, cache) {
       if (!el) continue;
       const key = `${im.id}|${im.x},${im.y},${im.w},${im.h}|${sub.x},${sub.y},${sub.w},${sub.h}`;
       ctx.drawImage(pixelPatch(el, im, sub, key), sub.x, sub.y, sub.w, sub.h);
+    }
+  }
+}
+
+/** Draw box, arrow and text annotations (above images, below ink). */
+export function drawShapes(ctx, shapes, theme = 'dark') {
+  for (const s of shapes) {
+    const color = colorForTheme(s.color, theme);
+    if (s.type === 'rect') {
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = rectStrokeWidth(s.size);
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.roundRect(s.x, s.y, s.w, s.h, 4);
+      ctx.stroke();
+      ctx.restore();
+    } else if (s.type === 'arrow') {
+      const pts = arrowPolygon(s);
+      ctx.save();
+      ctx.fillStyle = color;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1;
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    } else if (s.type === 'text') {
+      ctx.save();
+      ctx.font = `700 ${s.fontSize}px ${TEXT_FONT}`;
+      ctx.textBaseline = 'alphabetic';
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = s.fontSize * 0.14;
+      ctx.strokeStyle = THEMES[theme].bg;
+      ctx.fillStyle = color;
+      const lh = textLineHeight(s.fontSize);
+      textLines(s).forEach((line, i) => {
+        const y = s.y + s.fontSize + i * lh;
+        ctx.strokeText(line, s.x, y);
+        ctx.fillText(line, s.x, y);
+      });
+      ctx.restore();
     }
   }
 }
