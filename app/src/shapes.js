@@ -1,11 +1,17 @@
 // Box, arrow and text annotations. Pure geometry and SVG; drawing lives in canvas.js.
-import { colorForTheme, THEMES } from './palette.js?v=a72652eb4e';
+import { colorForTheme, THEMES } from './palette.js?v=98e8dfa53d';
 
 export const TEXT_FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
 export const TEXT_SIZES = { small: 18, medium: 24, large: 32, highlight: 32 };
 
 export function rectStrokeWidth(size) {
   return Math.max(2, size * 1.1);
+}
+
+/** Arrows get a black outline so they read on any background. */
+export const ARROW_OUTLINE = '#000';
+export function arrowOutlineWidth(size) {
+  return Math.max(1.5, size * 0.35);
 }
 
 /** Polygon (world coords) for a tapered arrow: thin tail, wide shaft, big head. */
@@ -97,7 +103,7 @@ export function shapeToSVG(s, theme = 'dark') {
   }
   if (s.type === 'arrow') {
     const d = arrowPolygon(s).map(([x, y], i) => `${i ? 'L' : 'M'}${f(x)} ${f(y)}`).join('') + 'Z';
-    return `  <path d="${d}" fill="${color}" stroke="${color}" stroke-width="1" stroke-linejoin="round"/>`;
+    return `  <path d="${d}" fill="${color}" stroke="${ARROW_OUTLINE}" stroke-width="${f(arrowOutlineWidth(s.size) * 2)}" stroke-linejoin="round" paint-order="stroke"/>`;
   }
   if (s.type === 'text') {
     const lh = textLineHeight(s.fontSize);

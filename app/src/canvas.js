@@ -1,9 +1,9 @@
 // View transform and canvas rendering helpers.
-import { strokeOutline, strokeBounds, outlineOptions, HIGHLIGHT_ALPHA } from './stroke.js?v=a72652eb4e';
-import { colorForTheme, THEMES } from './palette.js?v=a72652eb4e';
-import { imageBounds, loadImage } from './images.js?v=a72652eb4e';
-import { intersectRect, blockSizeFor, pixelateRegion } from './redact.js?v=a72652eb4e';
-import { arrowPolygon, rectStrokeWidth, textLines, textLineHeight, shapeBounds, TEXT_FONT } from './shapes.js?v=a72652eb4e';
+import { strokeOutline, strokeBounds, outlineOptions, HIGHLIGHT_ALPHA } from './stroke.js?v=98e8dfa53d';
+import { colorForTheme, THEMES } from './palette.js?v=98e8dfa53d';
+import { imageBounds, loadImage } from './images.js?v=98e8dfa53d';
+import { intersectRect, blockSizeFor, pixelateRegion } from './redact.js?v=98e8dfa53d';
+import { arrowPolygon, rectStrokeWidth, arrowOutlineWidth, ARROW_OUTLINE, textLines, textLineHeight, shapeBounds, TEXT_FONT } from './shapes.js?v=98e8dfa53d';
 
 export const MIN_SCALE = 0.1;
 export const MAX_SCALE = 16;
@@ -292,15 +292,16 @@ export function drawShapes(ctx, shapes, theme = 'dark') {
     } else if (s.type === 'arrow') {
       const pts = arrowPolygon(s);
       ctx.save();
-      ctx.fillStyle = color;
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 1;
       ctx.lineJoin = 'round';
       ctx.beginPath();
       pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
       ctx.closePath();
-      ctx.fill();
+      // Outline first (drawn at double width, half of it hidden under the fill).
+      ctx.strokeStyle = ARROW_OUTLINE;
+      ctx.lineWidth = arrowOutlineWidth(s.size) * 2;
       ctx.stroke();
+      ctx.fillStyle = color;
+      ctx.fill();
       ctx.restore();
     } else if (s.type === 'text') {
       ctx.save();
