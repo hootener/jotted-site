@@ -42,7 +42,7 @@ export function shortcutGroups({ desktop = false } = {}) {
   ];
   groups.push([desktop ? 'Desktop app (work from any app while Jotted runs)' : 'Desktop app only (macOS)', [
     ['⇧⌘J', 'Capture a screen area into a new jot'],
-    ['⇧⌘F', 'Capture the full screen'],
+    ['⇧⌘F', 'Capture a full screen (click the monitor if you have several)'],
     ['⇧⌘R', 'Capture the last area again'],
     ['⏱ button', 'Capture delay (0, 3, 5, 10 s); area is chosen first, then the countdown runs'],
     ['⌘N', 'New jot'],
