@@ -40,14 +40,15 @@ export function shortcutGroups({ desktop = false } = {}) {
       ['?', 'This list'],
     ]],
   ];
-  groups.push([desktop ? 'Desktop app (work from any app while Jotted runs)' : 'Desktop app only (macOS)', [
-    ['⇧⌘J', 'Capture a screen area into a new jot'],
-    ['⇧⌘F', 'Capture a full screen (click the monitor if you have several)'],
-    ['⇧⌘R', 'Capture the last area again'],
+  const cap = (key) => (IS_MAC ? `⇧⌘${key}` : `Ctrl+Shift+${key}`);
+  groups.push([desktop ? 'Desktop app (work from any app while Jotted runs)' : 'Desktop app only', [
+    [cap('J'), 'Capture a screen area into the open jot'],
+    [cap('F'), 'Capture a full screen (click the monitor if you have several)'],
+    [cap('R'), 'Capture the last area again'],
     ['⏱ button', 'Capture delay (0, 3, 5, 10 s); area is chosen first, then the countdown runs'],
-    ['⌘N', 'New jot'],
-    ['⌘L', 'All jots'],
-    ['⌘/', 'Keyboard shortcuts'],
+    [k(MOD, 'N'), 'New jot'],
+    [k(MOD, 'L'), 'All jots'],
+    [k(MOD, '/'), 'Keyboard shortcuts'],
   ]]);
   return groups;
 }

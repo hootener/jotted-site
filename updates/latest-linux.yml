@@ -1,9 +1,9 @@
-version: 2026.1015.7
+version: 2026.1015.8
 files:
-  - url: https://github.com/hootener/jotted-site/releases/download/2026.10.15.007/Jotted-linux-x86_64.AppImage
-    sha512: OJ1Sv6QLQCoDLVOEIZ02Vs5JoJPzzAOFNHn5B6yj+S1c8ZgGyi9VGtwTe95SVHBhD3G1P1ftRYTuq3fbPZ8cvA==
-    size: 126051897
-    blockMapSize: 132685
-path: https://github.com/hootener/jotted-site/releases/download/2026.10.15.007/Jotted-linux-x86_64.AppImage
-sha512: OJ1Sv6QLQCoDLVOEIZ02Vs5JoJPzzAOFNHn5B6yj+S1c8ZgGyi9VGtwTe95SVHBhD3G1P1ftRYTuq3fbPZ8cvA==
-releaseDate: '2026-10-15T16:41:39.237Z'
+  - url: https://github.com/hootener/jotted-site/releases/download/2026.10.15.008/Jotted-linux-x86_64.AppImage
+    sha512: KEtSARXwctr7BOvOYrVZO+MQYc+bCIX51QsRm/ivfAyx0F3tBLAGHdp/2t/d9F2YsX+TmvlzZUDnOQDsZ2RZkw==
+    size: 126055974
+    blockMapSize: 132666
+path: https://github.com/hootener/jotted-site/releases/download/2026.10.15.008/Jotted-linux-x86_64.AppImage
+sha512: KEtSARXwctr7BOvOYrVZO+MQYc+bCIX51QsRm/ivfAyx0F3tBLAGHdp/2t/d9F2YsX+TmvlzZUDnOQDsZ2RZkw==
+releaseDate: '2026-10-15T16:48:48.733Z'

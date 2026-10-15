@@ -1,6 +1,6 @@
 // IndexedDB-backed jot store for the browser build. Same interface as the
 // other stores. Migrates anything found in localStorage on first open.
-import { newJot, normalizeJot } from './store.js?v=c51ee24b5c';
+import { newJot, normalizeJot } from './store.js?v=3fc9c45e0a';
 
 const DB_NAME = 'jotted';
 const DB_VERSION = 1;

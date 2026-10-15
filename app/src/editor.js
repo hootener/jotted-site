@@ -1,18 +1,19 @@
 // Jot editor: full-screen pen canvas with pan/zoom, undo, autosave.
-import { View, fitCanvas, beginFrame, drawStrokes, drawStroke, drawImages, drawRedactions, drawShapes, drawPaper, createImageCache, PAPER_MODES } from './canvas.js?v=c51ee24b5c';
-import { normalizeRect, pointInRect } from './redact.js?v=c51ee24b5c';
-import { hitTestShape, moveShape, shapeBounds, textLines, textLineHeight, TEXT_FONT, TEXT_SIZES } from './shapes.js?v=c51ee24b5c';
-import { fitPlacement, pointInImage, imageId, blobToImageData } from './images.js?v=c51ee24b5c';
-import { createSmoother, simulatePressure, hitTestStroke, strokeBounds, PEN_SIZES } from './stroke.js?v=c51ee24b5c';
-import { PALETTE, colorForTheme } from './palette.js?v=c51ee24b5c';
-import { jotToSVG, jotToPNG, downloadBlob, bakeRedactions } from './export.js?v=c51ee24b5c';
-import { cleanName, defaultName } from './names.js?v=c51ee24b5c';
-import { toggleShortcuts } from './shortcuts.js?v=c51ee24b5c';
+import { View, fitCanvas, beginFrame, drawStrokes, drawStroke, drawImages, drawRedactions, drawShapes, drawPaper, createImageCache, PAPER_MODES } from './canvas.js?v=3fc9c45e0a';
+import { normalizeRect, pointInRect } from './redact.js?v=3fc9c45e0a';
+import { hitTestShape, moveShape, shapeBounds, textLines, textLineHeight, TEXT_FONT, TEXT_SIZES } from './shapes.js?v=3fc9c45e0a';
+import { fitPlacement, pointInImage, imageId, blobToImageData } from './images.js?v=3fc9c45e0a';
+import { createSmoother, simulatePressure, hitTestStroke, strokeBounds, PEN_SIZES } from './stroke.js?v=3fc9c45e0a';
+import { PALETTE, colorForTheme } from './palette.js?v=3fc9c45e0a';
+import { jotToSVG, jotToPNG, downloadBlob, bakeRedactions } from './export.js?v=3fc9c45e0a';
+import { cleanName, defaultName } from './names.js?v=3fc9c45e0a';
+import { toggleShortcuts } from './shortcuts.js?v=3fc9c45e0a';
 
 const SAVE_DELAY_MS = 400;
 // Platform convention: Cmd on macOS, Ctrl elsewhere.
 const IS_MAC = /Mac|iPhone|iPad/.test(navigator.platform) || navigator.userAgentData?.platform === 'macOS';
 const MOD_LABEL = IS_MAC ? '⌘' : 'Ctrl+';
+const CAP = (k) => (IS_MAC ? `⇧⌘${k}` : `Ctrl+Shift+${k}`);
 const PREFS_KEY = 'jotted:prefs';
 
 export function mountEditor(root, store, jot) {
@@ -72,10 +73,10 @@ export function mountEditor(root, store, jot) {
           </div>
           <div class="group capture" hidden>
             <span class="divider"></span>
-            <button class="btn icon cap-btn" data-cap="area" title="Capture an area (⇧⌘J)" aria-label="Capture area"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 5V2h3M11 2h3v3M14 11v3h-3M5 14H2v-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><rect x="5" y="5" width="6" height="6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2 1.5"/></svg></button>
-            <button class="btn icon cap-btn" data-cap="full" title="Capture the full screen (⇧⌘F)" aria-label="Capture full screen"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M5.5 14h5M8 11.5V14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+            <button class="btn icon cap-btn" data-cap="area" title="Capture an area (${CAP('J')})" aria-label="Capture area"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 5V2h3M11 2h3v3M14 11v3h-3M5 14H2v-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><rect x="5" y="5" width="6" height="6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2 1.5"/></svg></button>
+            <button class="btn icon cap-btn" data-cap="full" title="Capture the full screen (${CAP('F')})" aria-label="Capture full screen"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M5.5 14h5M8 11.5V14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
             <button class="btn cap-delay" title="Capture delay: wait this long before the shot" aria-label="Capture delay">0s</button>
-            <button class="btn icon cap-btn" data-cap="again" title="Capture the last area again (⇧⌘R)" aria-label="Capture last area again"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3.2 9.2A5 5 0 1 0 4.5 4.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M4.2 1.8v3.3h3.3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            <button class="btn icon cap-btn" data-cap="again" title="Capture the last area again (${CAP('R')})" aria-label="Capture last area again"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3.2 9.2A5 5 0 1 0 4.5 4.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M4.2 1.8v3.3h3.3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
           </div>
           <span class="divider"></span>
           <div class="group actions">
@@ -373,7 +374,7 @@ export function mountEditor(root, store, jot) {
       try {
         if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) {
           showToast('Rendering PDF…');
-          const { renderPdfPages, MAX_PAGES } = await import('./pdf.js?v=c51ee24b5c');
+          const { renderPdfPages, MAX_PAGES } = await import('./pdf.js?v=3fc9c45e0a');
           const { pages, total } = await renderPdfPages(file, (i, n) => showToast(`Rendering page ${i} of ${n}…`));
           if (pages.length) placeStack(pages);
           showToast(total > MAX_PAGES ? `Added first ${MAX_PAGES} of ${total} pages` : `Added ${pages.length} page${pages.length === 1 ? '' : 's'}`);
