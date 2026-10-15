@@ -40,16 +40,14 @@ export function shortcutGroups({ desktop = false } = {}) {
       ['?', 'This list'],
     ]],
   ];
-  if (desktop) {
-    groups.push(['Screen capture (works from any app while Jotted runs)', [
-      ['⇧⌘J', 'Capture an area into a new jot'],
-      ['⇧⌘F', 'Capture the full screen'],
-      ['⇧⌘R', 'Capture the last area again'],
-      ['⌘N', 'New jot'],
-      ['⌘L', 'All jots'],
-      ['⌘/', 'Keyboard shortcuts'],
-    ]]);
-  }
+  groups.push([desktop ? 'Desktop app (work from any app while Jotted runs)' : 'Desktop app only (macOS)', [
+    ['⇧⌘J', 'Capture a screen area into a new jot'],
+    ['⇧⌘F', 'Capture the full screen'],
+    ['⇧⌘R', 'Capture the last area again'],
+    ['⌘N', 'New jot'],
+    ['⌘L', 'All jots'],
+    ['⌘/', 'Keyboard shortcuts'],
+  ]]);
   return groups;
 }
 

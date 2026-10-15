@@ -1,9 +1,9 @@
 // Export a jot as SVG or PNG, cropped to the ink with padding.
-import { strokeOutline, strokeBounds, outlineToPathData, outlineOptions, HIGHLIGHT_ALPHA } from './stroke.js?v=1815c69993';
-import { colorForTheme, THEMES } from './palette.js?v=1815c69993';
-import { imageBounds, loadImage } from './images.js?v=1815c69993';
-import { intersectRect, blockSizeFor, pixelateRegion } from './redact.js?v=1815c69993';
-import { shapeBounds, shapeToSVG } from './shapes.js?v=1815c69993';
+import { strokeOutline, strokeBounds, outlineToPathData, outlineOptions, HIGHLIGHT_ALPHA } from './stroke.js?v=94fab66aae';
+import { colorForTheme, THEMES } from './palette.js?v=94fab66aae';
+import { imageBounds, loadImage } from './images.js?v=94fab66aae';
+import { intersectRect, blockSizeFor, pixelateRegion } from './redact.js?v=94fab66aae';
+import { shapeBounds, shapeToSVG } from './shapes.js?v=94fab66aae';
 
 const PAD = 32;
 
