@@ -1,9 +1,9 @@
-import { createStore } from './store.js?v=ba1e5667d9';
-import { isUlid } from './ulid.js?v=ba1e5667d9';
-import { mountEditor } from './editor.js?v=ba1e5667d9';
-import { mountList } from './list.js?v=ba1e5667d9';
-import { fitPlacement, imageId } from './images.js?v=ba1e5667d9';
-import { toggleShortcuts } from './shortcuts.js?v=ba1e5667d9';
+import { createStore } from './store.js?v=9eda473004';
+import { isUlid } from './ulid.js?v=9eda473004';
+import { mountEditor } from './editor.js?v=9eda473004';
+import { mountList } from './list.js?v=9eda473004';
+import { fitPlacement, imageId } from './images.js?v=9eda473004';
+import { toggleShortcuts } from './shortcuts.js?v=9eda473004';
 
 const root = document.getElementById('app');
 if (globalThis.jotted) {

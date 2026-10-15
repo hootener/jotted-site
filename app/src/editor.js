@@ -1,13 +1,13 @@
 // Jot editor: full-screen pen canvas with pan/zoom, undo, autosave.
-import { View, fitCanvas, beginFrame, drawStrokes, drawStroke, drawImages, drawRedactions, drawShapes, drawPaper, createImageCache, PAPER_MODES } from './canvas.js?v=ba1e5667d9';
-import { normalizeRect, pointInRect } from './redact.js?v=ba1e5667d9';
-import { hitTestShape, moveShape, shapeBounds, textLines, textLineHeight, TEXT_FONT, TEXT_SIZES } from './shapes.js?v=ba1e5667d9';
-import { fitPlacement, pointInImage, imageId, blobToImageData, loadImage } from './images.js?v=ba1e5667d9';
-import { createSmoother, simulatePressure, hitTestStroke, strokeBounds, PEN_SIZES } from './stroke.js?v=ba1e5667d9';
-import { PALETTE, colorForTheme } from './palette.js?v=ba1e5667d9';
-import { jotToSVG, jotToPNG, downloadBlob, bakeRedactions } from './export.js?v=ba1e5667d9';
-import { cleanName, defaultName } from './names.js?v=ba1e5667d9';
-import { toggleShortcuts } from './shortcuts.js?v=ba1e5667d9';
+import { View, fitCanvas, beginFrame, drawStrokes, drawStroke, drawImages, drawRedactions, drawShapes, drawPaper, createImageCache, PAPER_MODES } from './canvas.js?v=9eda473004';
+import { normalizeRect, pointInRect } from './redact.js?v=9eda473004';
+import { hitTestShape, moveShape, shapeBounds, textLines, textLineHeight, TEXT_FONT, TEXT_SIZES } from './shapes.js?v=9eda473004';
+import { fitPlacement, pointInImage, imageId, blobToImageData, loadImage } from './images.js?v=9eda473004';
+import { createSmoother, simulatePressure, hitTestStroke, strokeBounds, PEN_SIZES } from './stroke.js?v=9eda473004';
+import { PALETTE, colorForTheme } from './palette.js?v=9eda473004';
+import { jotToSVG, jotToPNG, downloadBlob, bakeRedactions } from './export.js?v=9eda473004';
+import { cleanName, defaultName } from './names.js?v=9eda473004';
+import { toggleShortcuts } from './shortcuts.js?v=9eda473004';
 
 const SAVE_DELAY_MS = 400;
 // Platform convention: Cmd on macOS, Ctrl elsewhere.
@@ -381,7 +381,7 @@ export function mountEditor(root, store, jot) {
       try {
         if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) {
           showToast('Rendering PDF…');
-          const { renderPdfPages, MAX_PAGES } = await import('./pdf.js?v=ba1e5667d9');
+          const { renderPdfPages, MAX_PAGES } = await import('./pdf.js?v=9eda473004');
           const { pages, total } = await renderPdfPages(file, (i, n) => showToast(`Rendering page ${i} of ${n}…`));
           if (pages.length) placeStack(pages);
           showToast(total > MAX_PAGES ? `Added first ${MAX_PAGES} of ${total} pages` : `Added ${pages.length} page${pages.length === 1 ? '' : 's'}`);
@@ -412,6 +412,13 @@ export function mountEditor(root, store, jot) {
     snapDialog.url.focus();
   }
   function onPaste(e) {
+    if (isTypingTarget(e.target)) return;
+    const text = e.clipboardData?.getData('text/plain') ?? '';
+    if (text.startsWith(CLIP_PREFIX)) {
+      e.preventDefault();
+      pasteItem(text.slice(CLIP_PREFIX.length));
+      return;
+    }
     const files = [...(e.clipboardData?.files ?? [])].filter((f) => f.type.startsWith('image/') || f.type === 'application/pdf');
     if (files.length === 0) return;
     e.preventDefault();
@@ -575,7 +582,7 @@ export function mountEditor(root, store, jot) {
     positionImageTools();
     paperDirty = true;
     baseDirty = true;
-    if (current) liveDirty = true;
+    liveDirty = true; // selection outline, handles and in-progress shapes live here
     requestRender();
     scheduleSave();
   }
@@ -873,6 +880,69 @@ export function mountEditor(root, store, jot) {
     }
     return true;
   }
+  // ---- Copy / cut / paste of the selection ---------------------------------
+  const CLIP_PREFIX = 'jotted:';
+  function serializeSelection() {
+    if (!selected) return null;
+    return JSON.stringify({ kind: selected.kind, item: selected.item });
+  }
+  function onCopy(e) {
+    if (isTypingTarget(e.target) || !selected) return;
+    const data = serializeSelection();
+    e.clipboardData.setData('text/plain', CLIP_PREFIX + data);
+    e.preventDefault();
+    showToast('Copied');
+  }
+  function onCut(e) {
+    if (isTypingTarget(e.target) || !selected) return;
+    onCopy(e);
+    deleteSelected();
+  }
+  /** Paste a serialized item: clone it with a new id, nudge it, select it.
+   *  Pasting the same copy repeatedly stair-steps each copy further. */
+  let lastPaste = { payload: null, n: 0 };
+  function pasteItem(payload) {
+    let parsed;
+    try { parsed = JSON.parse(payload); } catch { return false; }
+    const { kind, item } = parsed ?? {};
+    if (!kind || !item) return false;
+    const clone = structuredClone(item);
+    lastPaste = payload === lastPaste.payload ? { payload, n: lastPaste.n + 1 } : { payload, n: 1 };
+    const nudge = (24 * lastPaste.n) / view.scale;
+    let sel;
+    if (kind === 'stroke') {
+      for (const p of clone.points) { p[0] = round(p[0] + nudge, 2); p[1] = round(p[1] + nudge, 2); }
+      strokes.push(clone);
+      commit({ type: 'add', stroke: clone });
+      sel = { kind, item: clone };
+    } else if (kind === 'shape') {
+      clone.id = imageId();
+      moveShape(clone, nudge, nudge);
+      shapes.push(clone);
+      commit({ type: 'shape', shape: clone });
+      sel = { kind, item: clone };
+    } else if (kind === 'image') {
+      clone.id = imageId();
+      clone.x = round(clone.x + nudge, 2); clone.y = round(clone.y + nudge, 2);
+      images.push(clone);
+      commit({ type: 'image', image: clone });
+      sel = { kind, item: clone };
+    } else if (kind === 'redaction') {
+      clone.id = imageId();
+      clone.x = round(clone.x + nudge, 2); clone.y = round(clone.y + nudge, 2);
+      redactions.push(clone);
+      commit({ type: 'redact', redaction: clone });
+      sel = { kind, item: clone };
+    } else return false;
+    setTool('select');
+    setSelected(sel);
+    showToast('Pasted');
+    return true;
+  }
+  function isTypingTarget(t) {
+    return t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t?.isContentEditable;
+  }
+
   function drawSelection(ctx) {
     const b = selectionBounds();
     if (!b) return;
@@ -1601,6 +1671,8 @@ export function mountEditor(root, store, jot) {
   document.addEventListener('gesturestart', preventDefault);
   el.addEventListener('click', onHudClick);
   document.addEventListener('paste', onPaste);
+  document.addEventListener('copy', onCopy);
+  document.addEventListener('cut', onCut);
   el.addEventListener('dragover', onDragOver);
   el.addEventListener('dragleave', onDragLeave);
   el.addEventListener('drop', onDrop);
@@ -1627,6 +1699,8 @@ export function mountEditor(root, store, jot) {
     cancelAnimationFrame(frame);
     document.removeEventListener('gesturestart', preventDefault);
     document.removeEventListener('paste', onPaste);
+    document.removeEventListener('copy', onCopy);
+    document.removeEventListener('cut', onCut);
     window.removeEventListener('keydown', onKeyDown);
     window.removeEventListener('keyup', onKeyUp);
     window.removeEventListener('resize', resize);

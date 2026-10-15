@@ -32,11 +32,12 @@ export function shortcutGroups({ desktop = false } = {}) {
       ['H', 'Hide the interface'],
     ]],
     ['Jot', [
+      [k(MOD, 'C') + ' / ' + k(MOD, 'X') + ' / ' + k(MOD, 'V'), 'Copy / cut / paste the selected item (pointer tool)'],
       [k(MOD, 'Z'), 'Undo'],
       [k(SHIFT, MOD, 'Z'), 'Redo'],
       [k(MOD, 'E'), 'Export PNG'],
       [k(SHIFT, MOD, 'E'), 'Export SVG'],
-      [`${MOD} + V`, 'Paste an image or PDF'],
+
       ['?', 'This list'],
     ]],
   ];
