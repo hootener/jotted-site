@@ -1,8 +1,9 @@
-import { createStore } from './store.js?v=2457eabff9';
-import { isUlid } from './ulid.js?v=2457eabff9';
-import { mountEditor } from './editor.js?v=2457eabff9';
-import { mountList } from './list.js?v=2457eabff9';
-import { fitPlacement, imageId } from './images.js?v=2457eabff9';
+import { createStore } from './store.js?v=1815c69993';
+import { isUlid } from './ulid.js?v=1815c69993';
+import { mountEditor } from './editor.js?v=1815c69993';
+import { mountList } from './list.js?v=1815c69993';
+import { fitPlacement, imageId } from './images.js?v=1815c69993';
+import { toggleShortcuts } from './shortcuts.js?v=1815c69993';
 
 const root = document.getElementById('app');
 if (globalThis.jotted) {
@@ -78,5 +79,16 @@ globalThis.jotted?.onMenu?.(async (action) => {
     location.hash = `#/${jot.id}`;
   } else if (action === 'all-jots') {
     location.hash = '#/';
+  } else if (action === 'shortcuts') {
+    toggleShortcuts(true);
   }
+});
+
+globalThis.jotted?.onCaptureNotice?.((text) => {
+  let t = document.querySelector('.global-toast');
+  if (!t) { t = document.createElement('div'); t.className = 'toast global-toast show'; document.body.append(t); }
+  t.textContent = text;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 2500);
 });

@@ -1,12 +1,13 @@
 // Jot editor: full-screen pen canvas with pan/zoom, undo, autosave.
-import { View, fitCanvas, beginFrame, drawStrokes, drawStroke, drawImages, drawRedactions, drawShapes, drawPaper, createImageCache, PAPER_MODES } from './canvas.js?v=2457eabff9';
-import { normalizeRect, pointInRect } from './redact.js?v=2457eabff9';
-import { hitTestShape, moveShape, shapeBounds, textLines, textLineHeight, TEXT_FONT, TEXT_SIZES } from './shapes.js?v=2457eabff9';
-import { fitPlacement, pointInImage, imageId, blobToImageData } from './images.js?v=2457eabff9';
-import { createSmoother, simulatePressure, hitTestStroke, strokeBounds, PEN_SIZES } from './stroke.js?v=2457eabff9';
-import { PALETTE, colorForTheme } from './palette.js?v=2457eabff9';
-import { jotToSVG, jotToPNG, downloadBlob, bakeRedactions } from './export.js?v=2457eabff9';
-import { cleanName, defaultName } from './names.js?v=2457eabff9';
+import { View, fitCanvas, beginFrame, drawStrokes, drawStroke, drawImages, drawRedactions, drawShapes, drawPaper, createImageCache, PAPER_MODES } from './canvas.js?v=1815c69993';
+import { normalizeRect, pointInRect } from './redact.js?v=1815c69993';
+import { hitTestShape, moveShape, shapeBounds, textLines, textLineHeight, TEXT_FONT, TEXT_SIZES } from './shapes.js?v=1815c69993';
+import { fitPlacement, pointInImage, imageId, blobToImageData } from './images.js?v=1815c69993';
+import { createSmoother, simulatePressure, hitTestStroke, strokeBounds, PEN_SIZES } from './stroke.js?v=1815c69993';
+import { PALETTE, colorForTheme } from './palette.js?v=1815c69993';
+import { jotToSVG, jotToPNG, downloadBlob, bakeRedactions } from './export.js?v=1815c69993';
+import { cleanName, defaultName } from './names.js?v=1815c69993';
+import { toggleShortcuts } from './shortcuts.js?v=1815c69993';
 
 const SAVE_DELAY_MS = 400;
 // Platform convention: Cmd on macOS, Ctrl elsewhere.
@@ -69,6 +70,12 @@ export function mountEditor(root, store, jot) {
             <button class="btn icon undo" title="Undo (${MOD_LABEL}Z)" aria-label="Undo">↶</button>
             <button class="btn icon redo" title="Redo (Shift+${MOD_LABEL}Z)" aria-label="Redo">↷</button>
           </div>
+          <div class="group capture" hidden>
+            <span class="divider"></span>
+            <button class="btn icon cap-btn" data-cap="area" title="Capture an area (⇧⌘J)" aria-label="Capture area"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 5V2h3M11 2h3v3M14 11v3h-3M5 14H2v-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><rect x="5" y="5" width="6" height="6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2 1.5"/></svg></button>
+            <button class="btn icon cap-btn" data-cap="full" title="Capture the full screen (⇧⌘F)" aria-label="Capture full screen"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M5.5 14h5M8 11.5V14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+            <button class="btn icon cap-btn" data-cap="again" title="Capture the last area again (⇧⌘R)" aria-label="Capture last area again"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3.2 9.2A5 5 0 1 0 4.5 4.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M4.2 1.8v3.3h3.3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
           <span class="divider"></span>
           <div class="group actions">
             <button class="btn paper-btn" title="Paper: none / grid / lines / dots (G)"></button>
@@ -88,6 +95,7 @@ export function mountEditor(root, store, jot) {
                 <button class="btn" data-format="svg" role="menuitem">SVG</button>
               </div>
             </div>
+            <button class="btn icon help-btn" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">?</button>
             <span class="divider"></span>
             <button class="btn clear" title="Clear this jot (Delete)">Clear</button>
             <div class="more-wrap">
@@ -96,8 +104,12 @@ export function mountEditor(root, store, jot) {
                 <button class="btn" data-more="paper" role="menuitem">Paper</button>
                 <button class="btn" data-more="theme" role="menuitem">Light canvas</button>
                 <button class="btn" data-more="add" role="menuitem">Add image or PDF…</button>
+                <button class="btn cap-only" data-more="cap-area" role="menuitem" hidden>Capture an area</button>
+                <button class="btn cap-only" data-more="cap-full" role="menuitem" hidden>Capture full screen</button>
+                <button class="btn cap-only" data-more="cap-again" role="menuitem" hidden>Capture last area again</button>
                 <button class="btn" data-more="png" role="menuitem">Export PNG</button>
                 <button class="btn" data-more="svg" role="menuitem">Export SVG</button>
+                <button class="btn" data-more="shortcuts" role="menuitem">Keyboard shortcuts</button>
                 <button class="btn danger" data-more="clear" role="menuitem">Clear jot</button>
               </div>
             </div>
@@ -191,6 +203,13 @@ export function mountEditor(root, store, jot) {
     });
   }
   pickAnnot.addEventListener('click', () => togglePopover(annotWrap));
+  el.querySelector('.help-btn').addEventListener('click', () => toggleShortcuts(true));
+  if (globalThis.jotted?.captureArea) {
+    el.querySelector('.group.capture').hidden = false;
+    for (const b of el.querySelectorAll('.cap-only')) b.hidden = false;
+    const fns = { area: () => globalThis.jotted.captureArea(), full: () => globalThis.jotted.captureFull(), again: () => globalThis.jotted.captureAgain() };
+    for (const b of el.querySelectorAll('.cap-btn')) b.addEventListener('click', () => { closePopovers(); fns[b.dataset.cap](); });
+  }
   const shapes = jot.shapes;
   const textEditor = el.querySelector('.text-editor');
   moreBtn.addEventListener('click', () => togglePopover(moreWrap));
@@ -201,6 +220,10 @@ export function mountEditor(root, store, jot) {
       closePopovers();
       if (what === 'theme') setTheme(jot.theme === 'light' ? 'dark' : 'light');
       else if (what === 'add') fileInput.click();
+      else if (what === 'shortcuts') toggleShortcuts(true);
+      else if (what === 'cap-area') globalThis.jotted?.captureArea();
+      else if (what === 'cap-full') globalThis.jotted?.captureFull();
+      else if (what === 'cap-again') globalThis.jotted?.captureAgain();
 
       else if (what === 'png' || what === 'svg') exportJot(what);
       else if (what === 'clear') clearJot();
@@ -328,7 +351,7 @@ export function mountEditor(root, store, jot) {
       try {
         if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) {
           showToast('Rendering PDF…');
-          const { renderPdfPages, MAX_PAGES } = await import('./pdf.js?v=2457eabff9');
+          const { renderPdfPages, MAX_PAGES } = await import('./pdf.js?v=1815c69993');
           const { pages, total } = await renderPdfPages(file, (i, n) => showToast(`Rendering page ${i} of ${n}…`));
           if (pages.length) placeStack(pages);
           showToast(total > MAX_PAGES ? `Added first ${MAX_PAGES} of ${total} pages` : `Added ${pages.length} page${pages.length === 1 ? '' : 's'}`);
@@ -1282,8 +1305,11 @@ export function mountEditor(root, store, jot) {
     } else if (e.key === '0' && !mod) {
       view.reset();
       onViewChanged();
+    } else if (e.key === '?' && !mod) {
+      toggleShortcuts();
     } else if (e.key === 'Escape') {
-      if (selected) setSelected(null);
+      if (document.querySelector('.shortcuts') && !document.querySelector('.shortcuts').hidden) toggleShortcuts(false);
+      else if (selected) setSelected(null);
       else if (tool !== 'pen') setTool('pen');
       else location.hash = '#/';
     }
