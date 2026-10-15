@@ -1,9 +1,9 @@
-import { createStore } from './store.js?v=e9596d6ee0';
-import { isUlid } from './ulid.js?v=e9596d6ee0';
-import { mountEditor } from './editor.js?v=e9596d6ee0';
-import { mountList } from './list.js?v=e9596d6ee0';
-import { fitPlacement, imageId } from './images.js?v=e9596d6ee0';
-import { toggleShortcuts } from './shortcuts.js?v=e9596d6ee0';
+import { createStore } from './store.js?v=c51ee24b5c';
+import { isUlid } from './ulid.js?v=c51ee24b5c';
+import { mountEditor } from './editor.js?v=c51ee24b5c';
+import { mountList } from './list.js?v=c51ee24b5c';
+import { fitPlacement, imageId } from './images.js?v=c51ee24b5c';
+import { toggleShortcuts } from './shortcuts.js?v=c51ee24b5c';
 
 const root = document.getElementById('app');
 if (globalThis.jotted) {
@@ -62,8 +62,12 @@ globalThis.jotted?.onUpdate?.(({ state, version }) => {
   bar.querySelector('.dismiss').addEventListener('click', () => bar.remove());
 });
 
-// Desktop screen capture: open the captured area as a new jot.
+// Desktop screen capture: add to the open jot as a new layer, or start a new jot.
 globalThis.jotted?.onCapture?.(async ({ src, w, h }) => {
+  if (unmount?.addImage) {
+    unmount.addImage({ src, w, h });
+    return;
+  }
   const jot = store.newJot();
   const vw = innerWidth;
   const vh = innerHeight;
