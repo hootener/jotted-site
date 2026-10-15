@@ -1,13 +1,13 @@
 // Jot editor: full-screen pen canvas with pan/zoom, undo, autosave.
-import { View, fitCanvas, beginFrame, drawStrokes, drawStroke, drawImages, drawRedactions, drawShapes, drawPaper, createImageCache, PAPER_MODES } from './canvas.js?v=94fab66aae';
-import { normalizeRect, pointInRect } from './redact.js?v=94fab66aae';
-import { hitTestShape, moveShape, shapeBounds, textLines, textLineHeight, TEXT_FONT, TEXT_SIZES } from './shapes.js?v=94fab66aae';
-import { fitPlacement, pointInImage, imageId, blobToImageData } from './images.js?v=94fab66aae';
-import { createSmoother, simulatePressure, hitTestStroke, strokeBounds, PEN_SIZES } from './stroke.js?v=94fab66aae';
-import { PALETTE, colorForTheme } from './palette.js?v=94fab66aae';
-import { jotToSVG, jotToPNG, downloadBlob, bakeRedactions } from './export.js?v=94fab66aae';
-import { cleanName, defaultName } from './names.js?v=94fab66aae';
-import { toggleShortcuts } from './shortcuts.js?v=94fab66aae';
+import { View, fitCanvas, beginFrame, drawStrokes, drawStroke, drawImages, drawRedactions, drawShapes, drawPaper, createImageCache, PAPER_MODES } from './canvas.js?v=f3c2e8cb59';
+import { normalizeRect, pointInRect } from './redact.js?v=f3c2e8cb59';
+import { hitTestShape, moveShape, shapeBounds, textLines, textLineHeight, TEXT_FONT, TEXT_SIZES } from './shapes.js?v=f3c2e8cb59';
+import { fitPlacement, pointInImage, imageId, blobToImageData } from './images.js?v=f3c2e8cb59';
+import { createSmoother, simulatePressure, hitTestStroke, strokeBounds, PEN_SIZES } from './stroke.js?v=f3c2e8cb59';
+import { PALETTE, colorForTheme } from './palette.js?v=f3c2e8cb59';
+import { jotToSVG, jotToPNG, downloadBlob, bakeRedactions } from './export.js?v=f3c2e8cb59';
+import { cleanName, defaultName } from './names.js?v=f3c2e8cb59';
+import { toggleShortcuts } from './shortcuts.js?v=f3c2e8cb59';
 
 const SAVE_DELAY_MS = 400;
 // Platform convention: Cmd on macOS, Ctrl elsewhere.
@@ -74,6 +74,7 @@ export function mountEditor(root, store, jot) {
             <span class="divider"></span>
             <button class="btn icon cap-btn" data-cap="area" title="Capture an area (⇧⌘J)" aria-label="Capture area"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 5V2h3M11 2h3v3M14 11v3h-3M5 14H2v-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><rect x="5" y="5" width="6" height="6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2 1.5"/></svg></button>
             <button class="btn icon cap-btn" data-cap="full" title="Capture the full screen (⇧⌘F)" aria-label="Capture full screen"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M5.5 14h5M8 11.5V14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+            <button class="btn cap-delay" title="Capture delay: wait this long before the shot" aria-label="Capture delay">0s</button>
             <button class="btn icon cap-btn" data-cap="again" title="Capture the last area again (⇧⌘R)" aria-label="Capture last area again"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3.2 9.2A5 5 0 1 0 4.5 4.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M4.2 1.8v3.3h3.3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
           </div>
           <span class="divider"></span>
@@ -107,6 +108,7 @@ export function mountEditor(root, store, jot) {
                 <button class="btn cap-only" data-more="cap-area" role="menuitem" hidden>Capture an area</button>
                 <button class="btn cap-only" data-more="cap-full" role="menuitem" hidden>Capture full screen</button>
                 <button class="btn cap-only" data-more="cap-again" role="menuitem" hidden>Capture last area again</button>
+                <button class="btn cap-only" data-more="cap-delay" role="menuitem" hidden>Capture delay: 0s</button>
                 <button class="btn" data-more="png" role="menuitem">Export PNG</button>
                 <button class="btn" data-more="svg" role="menuitem">Export SVG</button>
                 <button class="btn" data-more="shortcuts" role="menuitem">Keyboard shortcuts</button>
@@ -204,8 +206,27 @@ export function mountEditor(root, store, jot) {
   }
   pickAnnot.addEventListener('click', () => togglePopover(annotWrap));
   el.querySelector('.help-btn').addEventListener('click', () => toggleShortcuts(true));
+  // Capture delay (desktop): 0 / 3 / 5 / 10 seconds, remembered.
+  const DELAYS = [0, 3, 5, 10];
+  let captureDelay = Number(localStorage.getItem('jotted:captureDelay')) || 0;
+  function renderCaptureDelay() {
+    const label = `${captureDelay}s`;
+    const b = el.querySelector('.cap-delay');
+    b.textContent = captureDelay ? `⏱ ${label}` : label;
+    b.setAttribute('aria-pressed', String(captureDelay > 0));
+    el.querySelector('[data-more="cap-delay"]').textContent = `Capture delay: ${label}`;
+  }
+  function cycleCaptureDelay() {
+    captureDelay = DELAYS[(DELAYS.indexOf(captureDelay) + 1) % DELAYS.length];
+    try { localStorage.setItem('jotted:captureDelay', String(captureDelay)); } catch { /* ignore */ }
+    globalThis.jotted?.setCaptureDelay?.(captureDelay);
+    renderCaptureDelay();
+  }
   if (globalThis.jotted?.captureArea) {
     el.querySelector('.group.capture').hidden = false;
+    el.querySelector('.cap-delay').addEventListener('click', cycleCaptureDelay);
+    globalThis.jotted.setCaptureDelay?.(captureDelay);
+    renderCaptureDelay();
     for (const b of el.querySelectorAll('.cap-only')) b.hidden = false;
     const fns = { area: () => globalThis.jotted.captureArea(), full: () => globalThis.jotted.captureFull(), again: () => globalThis.jotted.captureAgain() };
     for (const b of el.querySelectorAll('.cap-btn')) b.addEventListener('click', () => { closePopovers(); fns[b.dataset.cap](); });
@@ -224,6 +245,7 @@ export function mountEditor(root, store, jot) {
       else if (what === 'cap-area') globalThis.jotted?.captureArea();
       else if (what === 'cap-full') globalThis.jotted?.captureFull();
       else if (what === 'cap-again') globalThis.jotted?.captureAgain();
+      else if (what === 'cap-delay') { cycleCaptureDelay(); return; } // stays open to show the new value
 
       else if (what === 'png' || what === 'svg') exportJot(what);
       else if (what === 'clear') clearJot();
@@ -351,7 +373,7 @@ export function mountEditor(root, store, jot) {
       try {
         if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) {
           showToast('Rendering PDF…');
-          const { renderPdfPages, MAX_PAGES } = await import('./pdf.js?v=94fab66aae');
+          const { renderPdfPages, MAX_PAGES } = await import('./pdf.js?v=f3c2e8cb59');
           const { pages, total } = await renderPdfPages(file, (i, n) => showToast(`Rendering page ${i} of ${n}…`));
           if (pages.length) placeStack(pages);
           showToast(total > MAX_PAGES ? `Added first ${MAX_PAGES} of ${total} pages` : `Added ${pages.length} page${pages.length === 1 ? '' : 's'}`);

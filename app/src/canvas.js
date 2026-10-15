@@ -1,9 +1,9 @@
 // View transform and canvas rendering helpers.
-import { strokeOutline, strokeBounds, outlineOptions, HIGHLIGHT_ALPHA } from './stroke.js?v=94fab66aae';
-import { colorForTheme, THEMES } from './palette.js?v=94fab66aae';
-import { imageBounds, loadImage } from './images.js?v=94fab66aae';
-import { intersectRect, blockSizeFor, pixelateRegion } from './redact.js?v=94fab66aae';
-import { arrowPolygon, rectStrokeWidth, textLines, textLineHeight, shapeBounds, TEXT_FONT } from './shapes.js?v=94fab66aae';
+import { strokeOutline, strokeBounds, outlineOptions, HIGHLIGHT_ALPHA } from './stroke.js?v=f3c2e8cb59';
+import { colorForTheme, THEMES } from './palette.js?v=f3c2e8cb59';
+import { imageBounds, loadImage } from './images.js?v=f3c2e8cb59';
+import { intersectRect, blockSizeFor, pixelateRegion } from './redact.js?v=f3c2e8cb59';
+import { arrowPolygon, rectStrokeWidth, textLines, textLineHeight, shapeBounds, TEXT_FONT } from './shapes.js?v=f3c2e8cb59';
 
 export const MIN_SCALE = 0.1;
 export const MAX_SCALE = 16;

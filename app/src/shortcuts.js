@@ -44,6 +44,7 @@ export function shortcutGroups({ desktop = false } = {}) {
     ['⇧⌘J', 'Capture a screen area into a new jot'],
     ['⇧⌘F', 'Capture the full screen'],
     ['⇧⌘R', 'Capture the last area again'],
+    ['⏱ button', 'Capture delay (0, 3, 5, 10 s); area is chosen first, then the countdown runs'],
     ['⌘N', 'New jot'],
     ['⌘L', 'All jots'],
     ['⌘/', 'Keyboard shortcuts'],

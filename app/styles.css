@@ -371,6 +371,8 @@ html, body {
 .help-btn { font-weight: 700; }
 .cap-btn svg { display: block; }
 .group.capture { gap: 6px; }
+.btn.cap-delay { font-size: 12px; padding: 6px 9px; min-width: 40px; font-variant-numeric: tabular-nums; }
+.btn.cap-delay[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
 .global-toast { position: fixed; z-index: 30; }
 
 /* ---- Shortcuts overlay ------------------------------------------------ */
