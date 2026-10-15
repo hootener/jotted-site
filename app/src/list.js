@@ -1,5 +1,5 @@
 // Home page: list of saved jots.
-import { renderThumbnail, createImageCache } from './canvas.js?v=98e8dfa53d';
+import { renderThumbnail, createImageCache } from './canvas.js?v=ba1e5667d9';
 
 export function mountList(root, store, jots) {
   root.innerHTML = `
@@ -53,6 +53,7 @@ export function mountList(root, store, jots) {
           <span class="name">${escapeHtml(jot.name)}</span>
           <span class="count">${formatDate(jot.updatedAt)} · ${jot.strokes.length} stroke${jot.strokes.length === 1 ? '' : 's'}</span>
         </div>
+        ${jot.builtin ? '<span class="builtin" title="Comes with Jotted; a newer one arrives with each update">built-in</span>' : ''}
         <button class="btn ghost delete" title="Delete jot">Delete</button>
       </div>`;
     card.querySelector('.thumb').append(renderThumbnail(jot, 240, 150, imageCache));
@@ -64,7 +65,14 @@ export function mountList(root, store, jots) {
     del.addEventListener('click', async () => {
       if (armed) {
         clearTimeout(armed);
-        await store.deleteJot(jot.id);
+        try {
+          await store.deleteJot(jot.id);
+        } catch (err) {
+          del.textContent = 'Protected';
+          setTimeout(() => { del.textContent = 'Delete'; del.classList.remove('danger'); }, 2000);
+          console.warn(err);
+          return;
+        }
         card.remove();
         if (!grid.children.length) mountList(root, store, []);
         return;

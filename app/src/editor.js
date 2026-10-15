@@ -1,13 +1,13 @@
 // Jot editor: full-screen pen canvas with pan/zoom, undo, autosave.
-import { View, fitCanvas, beginFrame, drawStrokes, drawStroke, drawImages, drawRedactions, drawShapes, drawPaper, createImageCache, PAPER_MODES } from './canvas.js?v=98e8dfa53d';
-import { normalizeRect, pointInRect } from './redact.js?v=98e8dfa53d';
-import { hitTestShape, moveShape, shapeBounds, textLines, textLineHeight, TEXT_FONT, TEXT_SIZES } from './shapes.js?v=98e8dfa53d';
-import { fitPlacement, pointInImage, imageId, blobToImageData, loadImage } from './images.js?v=98e8dfa53d';
-import { createSmoother, simulatePressure, hitTestStroke, strokeBounds, PEN_SIZES } from './stroke.js?v=98e8dfa53d';
-import { PALETTE, colorForTheme } from './palette.js?v=98e8dfa53d';
-import { jotToSVG, jotToPNG, downloadBlob, bakeRedactions } from './export.js?v=98e8dfa53d';
-import { cleanName, defaultName } from './names.js?v=98e8dfa53d';
-import { toggleShortcuts } from './shortcuts.js?v=98e8dfa53d';
+import { View, fitCanvas, beginFrame, drawStrokes, drawStroke, drawImages, drawRedactions, drawShapes, drawPaper, createImageCache, PAPER_MODES } from './canvas.js?v=ba1e5667d9';
+import { normalizeRect, pointInRect } from './redact.js?v=ba1e5667d9';
+import { hitTestShape, moveShape, shapeBounds, textLines, textLineHeight, TEXT_FONT, TEXT_SIZES } from './shapes.js?v=ba1e5667d9';
+import { fitPlacement, pointInImage, imageId, blobToImageData, loadImage } from './images.js?v=ba1e5667d9';
+import { createSmoother, simulatePressure, hitTestStroke, strokeBounds, PEN_SIZES } from './stroke.js?v=ba1e5667d9';
+import { PALETTE, colorForTheme } from './palette.js?v=ba1e5667d9';
+import { jotToSVG, jotToPNG, downloadBlob, bakeRedactions } from './export.js?v=ba1e5667d9';
+import { cleanName, defaultName } from './names.js?v=ba1e5667d9';
+import { toggleShortcuts } from './shortcuts.js?v=ba1e5667d9';
 
 const SAVE_DELAY_MS = 400;
 // Platform convention: Cmd on macOS, Ctrl elsewhere.
@@ -381,7 +381,7 @@ export function mountEditor(root, store, jot) {
       try {
         if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) {
           showToast('Rendering PDF…');
-          const { renderPdfPages, MAX_PAGES } = await import('./pdf.js?v=98e8dfa53d');
+          const { renderPdfPages, MAX_PAGES } = await import('./pdf.js?v=ba1e5667d9');
           const { pages, total } = await renderPdfPages(file, (i, n) => showToast(`Rendering page ${i} of ${n}…`));
           if (pages.length) placeStack(pages);
           showToast(total > MAX_PAGES ? `Added first ${MAX_PAGES} of ${total} pages` : `Added ${pages.length} page${pages.length === 1 ? '' : 's'}`);
