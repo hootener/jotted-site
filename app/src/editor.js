@@ -1,13 +1,13 @@
 // Jot editor: full-screen pen canvas with pan/zoom, undo, autosave.
-import { View, fitCanvas, beginFrame, drawStrokes, drawStroke, drawImages, drawRedactions, drawShapes, drawPaper, createImageCache, PAPER_MODES } from './canvas.js?v=3fc9c45e0a';
-import { normalizeRect, pointInRect } from './redact.js?v=3fc9c45e0a';
-import { hitTestShape, moveShape, shapeBounds, textLines, textLineHeight, TEXT_FONT, TEXT_SIZES } from './shapes.js?v=3fc9c45e0a';
-import { fitPlacement, pointInImage, imageId, blobToImageData } from './images.js?v=3fc9c45e0a';
-import { createSmoother, simulatePressure, hitTestStroke, strokeBounds, PEN_SIZES } from './stroke.js?v=3fc9c45e0a';
-import { PALETTE, colorForTheme } from './palette.js?v=3fc9c45e0a';
-import { jotToSVG, jotToPNG, downloadBlob, bakeRedactions } from './export.js?v=3fc9c45e0a';
-import { cleanName, defaultName } from './names.js?v=3fc9c45e0a';
-import { toggleShortcuts } from './shortcuts.js?v=3fc9c45e0a';
+import { View, fitCanvas, beginFrame, drawStrokes, drawStroke, drawImages, drawRedactions, drawShapes, drawPaper, createImageCache, PAPER_MODES } from './canvas.js?v=60287c675f';
+import { normalizeRect, pointInRect } from './redact.js?v=60287c675f';
+import { hitTestShape, moveShape, shapeBounds, textLines, textLineHeight, TEXT_FONT, TEXT_SIZES } from './shapes.js?v=60287c675f';
+import { fitPlacement, pointInImage, imageId, blobToImageData, loadImage } from './images.js?v=60287c675f';
+import { createSmoother, simulatePressure, hitTestStroke, strokeBounds, PEN_SIZES } from './stroke.js?v=60287c675f';
+import { PALETTE, colorForTheme } from './palette.js?v=60287c675f';
+import { jotToSVG, jotToPNG, downloadBlob, bakeRedactions } from './export.js?v=60287c675f';
+import { cleanName, defaultName } from './names.js?v=60287c675f';
+import { toggleShortcuts } from './shortcuts.js?v=60287c675f';
 
 const SAVE_DELAY_MS = 400;
 // Platform convention: Cmd on macOS, Ctrl elsewhere.
@@ -28,6 +28,7 @@ export function mountEditor(root, store, jot) {
   //        | { type: 'shape', shape } | { type: 'removeShape', shape, index }
   //        | { type: 'moveShape', shape, dx, dy } | { type: 'editText', shape, before, after }
   //        | { type: 'moveItem', sel: { kind, item }, dx, dy }
+  //        | { type: 'imageEdit', image, before: {x,y,w,h,src}, after }
   const undoStack = [];
   const redoStack = [];
   let color = prefs.color;
@@ -121,6 +122,10 @@ export function mountEditor(root, store, jot) {
       </footer>
       <div class="toast" aria-live="polite"></div>
       <textarea class="text-editor" hidden rows="1" spellcheck="false" aria-label="Annotation text"></textarea>
+      <div class="img-tools" hidden>
+        <button class="btn icon" data-imgtool="resize" title="Resize"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M2 14V9M2 14h5M14 2v5M14 2H9M2 14L14 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button class="btn icon" data-imgtool="crop" title="Crop"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 1v11h11M1 4h11v11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      </div>
       <div class="drop-hint" hidden>Drop to add</div>
       <form class="snapshot-dialog" hidden>
         <label>Web page URL <input name="url" type="url" placeholder="https://example.com" required autocomplete="off"></label>
@@ -234,6 +239,7 @@ export function mountEditor(root, store, jot) {
   }
   const shapes = jot.shapes;
   const textEditor = el.querySelector('.text-editor');
+  const imgTools = el.querySelector('.img-tools');
   moreBtn.addEventListener('click', () => togglePopover(moreWrap));
   for (const b of el.querySelectorAll('.more-menu button')) {
     b.addEventListener('click', () => {
@@ -290,6 +296,7 @@ export function mountEditor(root, store, jot) {
     if (next !== 'select') setSelected(null);
     tool = next;
     el.classList.toggle('select-mode', tool === 'select');
+    positionImageTools();
     const erasing = tool === 'eraser';
     el.classList.toggle('erasing-mode', erasing);
     el.classList.toggle('redact-mode', tool === 'redact');
@@ -374,7 +381,7 @@ export function mountEditor(root, store, jot) {
       try {
         if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) {
           showToast('Rendering PDF…');
-          const { renderPdfPages, MAX_PAGES } = await import('./pdf.js?v=3fc9c45e0a');
+          const { renderPdfPages, MAX_PAGES } = await import('./pdf.js?v=60287c675f');
           const { pages, total } = await renderPdfPages(file, (i, n) => showToast(`Rendering page ${i} of ${n}…`));
           if (pages.length) placeStack(pages);
           showToast(total > MAX_PAGES ? `Added first ${MAX_PAGES} of ${total} pages` : `Added ${pages.length} page${pages.length === 1 ? '' : 's'}`);
@@ -548,6 +555,7 @@ export function mountEditor(root, store, jot) {
       if (current) drawStroke(liveCtx, current.stroke, jot.theme);
       if (shaping?.draft) drawShapes(liveCtx, [shaping.draft], jot.theme);
       if (selected) drawSelection(liveCtx);
+      drawImageEdit(liveCtx);
       if (redacting) {
         const r = normalizeRect(redacting.x0, redacting.y0, redacting.x1, redacting.y1);
         liveCtx.save();
@@ -564,6 +572,7 @@ export function mountEditor(root, store, jot) {
 
   function onViewChanged() {
     if (editing) positionTextEditor();
+    positionImageTools();
     paperDirty = true;
     baseDirty = true;
     if (current) liveDirty = true;
@@ -614,6 +623,7 @@ export function mountEditor(root, store, jot) {
     else if (action.type === 'moveShape') moveShape(action.shape, -action.dx, -action.dy);
     else if (action.type === 'editText') Object.assign(action.shape, action.before);
     else if (action.type === 'moveItem') moveItem(action.sel, -action.dx, -action.dy);
+    else if (action.type === 'imageEdit') Object.assign(action.image, action.before);
     redoStack.push(action);
     afterHistoryChange();
   }
@@ -634,6 +644,7 @@ export function mountEditor(root, store, jot) {
     else if (action.type === 'moveShape') moveShape(action.shape, action.dx, action.dy);
     else if (action.type === 'editText') Object.assign(action.shape, action.after);
     else if (action.type === 'moveItem') moveItem(action.sel, action.dx, action.dy);
+    else if (action.type === 'imageEdit') Object.assign(action.image, action.after);
     undoStack.push(action);
     afterHistoryChange();
   }
@@ -671,6 +682,8 @@ export function mountEditor(root, store, jot) {
     commit({ type: 'clear', strokes: strokes.splice(0, strokes.length), images: images.splice(0, images.length), redactions: redactions.splice(0, redactions.length), shapes: shapes.splice(0, shapes.length) });
   }
   function afterHistoryChange() {
+    if (imageEdit) imageEdit.crop = { x: imageEdit.image.x, y: imageEdit.image.y, w: imageEdit.image.w, h: imageEdit.image.h };
+    positionImageTools();
     if (selected) {
       const list = { image: images, shape: shapes, stroke: strokes, redaction: redactions }[selected.kind];
       if (!list.includes(selected.item)) selected = null;
@@ -767,8 +780,10 @@ export function mountEditor(root, store, jot) {
   let selecting = null; // drag in progress: { pointerId, x0, y0, sx, sy, dx, dy, moved }
 
   function setSelected(sel) {
+    if (!sel || sel.item !== imageEdit?.image) imageEdit = null;
     selected = sel;
     liveDirty = true;
+    positionImageTools();
     requestRender();
   }
   function selectionBounds() {
@@ -827,6 +842,7 @@ export function mountEditor(root, store, jot) {
   function endSelect() {
     const sel = selecting;
     selecting = null;
+    positionImageTools();
     if (!sel || !selected) return;
     if (sel.moved) {
       commit({ type: 'moveItem', sel: selected, dx: sel.dx, dy: sel.dy });
@@ -867,6 +883,159 @@ export function mountEditor(root, store, jot) {
     ctx.strokeStyle = jot.theme === 'light' ? '#1c7fd6' : '#7fd4ff';
     ctx.strokeRect(b.minX - pad, b.minY - pad, b.maxX - b.minX + pad * 2, b.maxY - b.minY + pad * 2);
     ctx.restore();
+  }
+
+  // ---- Image resize / crop -------------------------------------------------
+  let imageEdit = null; // { mode: 'resize' | 'crop', image, crop: {x,y,w,h} }
+  let handleDrag = null; // { pointerId, handle, before, startW: [wx, wy], dragging }
+  const HANDLE_PX = 7;
+
+  function setImageEdit(mode) {
+    if (!selected || selected.kind !== 'image') return;
+    imageEdit = mode ? { mode, image: selected.item, crop: { x: selected.item.x, y: selected.item.y, w: selected.item.w, h: selected.item.h } } : null;
+    for (const b of imgTools.querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.imgtool === mode));
+    liveDirty = true;
+    requestRender();
+  }
+  function positionImageTools() {
+    const show = selected?.kind === 'image' && tool === 'select' && !selecting && !handleDrag;
+    imgTools.hidden = !show;
+    if (!show) return;
+    const im = selected.item;
+    const [sx, sy] = view.worldToScreen(im.x, im.y);
+    imgTools.style.left = `${Math.max(4, sx)}px`;
+    imgTools.style.top = `${Math.max(4, sy - 38)}px`;
+  }
+  /** Handle positions (world) for the active edit mode. */
+  function editHandles() {
+    if (!imageEdit) return [];
+    const r = imageEdit.mode === 'crop' ? imageEdit.crop : imageEdit.image;
+    const { x, y, w, h } = r;
+    const corners = [
+      { id: 'nw', x, y }, { id: 'ne', x: x + w, y }, { id: 'se', x: x + w, y: y + h }, { id: 'sw', x, y: y + h },
+    ];
+    if (imageEdit.mode === 'crop') return corners;
+    return [...corners, { id: 'n', x: x + w / 2, y }, { id: 'e', x: x + w, y: y + h / 2 }, { id: 's', x: x + w / 2, y: y + h }, { id: 'w', x, y: y + h / 2 }];
+  }
+  function handleAt(sx, sy) {
+    const reach = imageEdit?.mode === 'crop' ? 16 : 12;
+    for (const hnd of editHandles()) {
+      const [hx, hy] = view.worldToScreen(hnd.x, hnd.y);
+      if (Math.hypot(hx - sx, hy - sy) <= reach) return hnd.id;
+    }
+    return null;
+  }
+  function beginHandleDrag(e, handle) {
+    const im = imageEdit.image;
+    handleDrag = { pointerId: e.pointerId, handle, before: { x: im.x, y: im.y, w: im.w, h: im.h, src: im.src }, crop0: { ...imageEdit.crop }, dragging: true };
+    capture(e.pointerId);
+    positionImageTools();
+  }
+  function moveHandleDrag(e) {
+    const [wx, wy] = view.screenToWorld(e.clientX, e.clientY);
+    const h = handleDrag.handle;
+    if (imageEdit.mode === 'resize') {
+      const b = handleDrag.before;
+      const aspect = b.w / b.h;
+      let { x, y, w, hgt } = { x: b.x, y: b.y, w: b.w, hgt: b.h };
+      const minW = 16 / view.scale;
+      if (h.includes('e')) w = Math.max(minW, wx - b.x);
+      if (h.includes('s')) hgt = Math.max(minW, wy - b.y);
+      if (h.includes('w')) { w = Math.max(minW, b.x + b.w - wx); x = b.x + b.w - w; }
+      if (h.includes('n')) { hgt = Math.max(minW, b.y + b.h - wy); y = b.y + b.h - hgt; }
+      if (h.length === 2) { // corners keep the aspect ratio
+        if (w / hgt > aspect) w = hgt * aspect; else hgt = w / aspect;
+        if (h.includes('w')) x = b.x + b.w - w;
+        if (h.includes('n')) y = b.y + b.h - hgt;
+      }
+      Object.assign(imageEdit.image, { x: round(x, 2), y: round(y, 2), w: round(w, 2), h: round(hgt, 2) });
+      imageEdit.crop = { x, y, w, h: hgt };
+      baseDirty = true;
+    } else {
+      const im = imageEdit.image;
+      const c = handleDrag.crop0;
+      const cx = Math.min(Math.max(wx, im.x), im.x + im.w);
+      const cy = Math.min(Math.max(wy, im.y), im.y + im.h);
+      let x0 = c.x, y0 = c.y, x1 = c.x + c.w, y1 = c.y + c.h;
+      if (h.includes('w')) x0 = cx; if (h.includes('e')) x1 = cx;
+      if (h.includes('n')) y0 = cy; if (h.includes('s')) y1 = cy;
+      const minW = 8 / view.scale;
+      imageEdit.crop = { x: Math.min(x0, x1 - minW), y: Math.min(y0, y1 - minW), w: Math.max(minW, Math.abs(x1 - x0)), h: Math.max(minW, Math.abs(y1 - y0)) };
+    }
+    liveDirty = true;
+    requestRender();
+  }
+  async function endHandleDrag() {
+    const hd = handleDrag;
+    handleDrag = null;
+    if (!imageEdit) return;
+    const im = imageEdit.image;
+    if (imageEdit.mode === 'resize') {
+      const after = { x: im.x, y: im.y, w: im.w, h: im.h, src: im.src };
+      if (after.x !== hd.before.x || after.y !== hd.before.y || after.w !== hd.before.w || after.h !== hd.before.h) {
+        commit({ type: 'imageEdit', image: im, before: hd.before, after });
+      }
+    } else {
+      await applyCrop(im, imageEdit.crop, hd.before);
+      imageEdit.crop = { x: im.x, y: im.y, w: im.w, h: im.h };
+    }
+    liveDirty = true;
+    positionImageTools();
+    requestRender();
+  }
+  /** Crop the image's pixels to `rect` (world) and commit as one undo step. */
+  async function applyCrop(im, rect, before) {
+    const el = await loadImage(im.src);
+    const sx = el.naturalWidth / before.w;
+    const sy = el.naturalHeight / before.h;
+    const px = Math.round((rect.x - before.x) * sx), py = Math.round((rect.y - before.y) * sy);
+    const pw = Math.max(1, Math.round(rect.w * sx)), ph = Math.max(1, Math.round(rect.h * sy));
+    if (px === 0 && py === 0 && pw === el.naturalWidth && ph === el.naturalHeight) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = pw; canvas.height = ph;
+    canvas.getContext('2d').drawImage(el, px, py, pw, ph, 0, 0, pw, ph);
+    const after = { x: round(rect.x, 2), y: round(rect.y, 2), w: round(rect.w, 2), h: round(rect.h, 2), src: canvas.toDataURL('image/png') };
+    Object.assign(im, after);
+    commit({ type: 'imageEdit', image: im, before, after });
+    showToast('Cropped');
+  }
+  function drawImageEdit(ctx) {
+    if (!imageEdit) return;
+    const px = 1 / view.scale;
+    ctx.save();
+    if (imageEdit.mode === 'crop') {
+      const im = imageEdit.image;
+      const c = imageEdit.crop;
+      if (handleDrag) { // darken everything outside the crop rectangle
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+        ctx.beginPath();
+        ctx.rect(im.x, im.y, im.w, im.h);
+        ctx.rect(c.x, c.y, c.w, c.h);
+        ctx.fill('evenodd');
+      }
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1 * px;
+      ctx.strokeRect(c.x, c.y, c.w, c.h);
+      ctx.lineWidth = 4 * px;
+      const L = Math.min(c.w, c.h, 22 * px);
+      const corner = (x, y, dx, dy) => { ctx.beginPath(); ctx.moveTo(x + dx * L, y); ctx.lineTo(x, y); ctx.lineTo(x, y + dy * L); ctx.stroke(); };
+      corner(c.x, c.y, 1, 1); corner(c.x + c.w, c.y, -1, 1); corner(c.x + c.w, c.y + c.h, -1, -1); corner(c.x, c.y + c.h, 1, -1);
+    } else {
+      ctx.fillStyle = '#fff';
+      ctx.strokeStyle = jot.theme === 'light' ? '#1c7fd6' : '#7fd4ff';
+      ctx.lineWidth = 1.5 * px;
+      const r = HANDLE_PX * px;
+      for (const hnd of editHandles()) {
+        ctx.beginPath();
+        ctx.rect(hnd.x - r / 2, hnd.y - r / 2, r, r);
+        ctx.fill();
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+  for (const b of imgTools.querySelectorAll('button')) {
+    b.addEventListener('click', () => setImageEdit(imageEdit?.mode === b.dataset.imgtool ? null : b.dataset.imgtool));
   }
 
   // ---- Boxes, arrows, text -----------------------------------------------
@@ -1118,12 +1287,22 @@ export function mountEditor(root, store, jot) {
   function onPointerDown(e) {
     closePopovers();
     if (erasing || redacting || shaping || selecting) return;
+    // Space+drag and middle mouse pan in every mode.
+    if (e.pointerType !== 'touch' && !current && !mousePan && (e.button === 1 || (e.button === 0 && spaceHeld))) {
+      e.preventDefault();
+      panStart(e);
+      return;
+    }
     if (tool === 'select' && !current && !mousePan && e.button === 0 && !e.altKey) {
       if (e.pointerType === 'touch') {
         touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
         if (touches.size > 1) return;
       }
       e.preventDefault();
+      if (imageEdit && !handleDrag) {
+        const h = handleAt(e.clientX, e.clientY);
+        if (h) { beginHandleDrag(e, h); return; }
+      }
       beginSelect(e);
       if (selecting) selecting.dblclick = e.detail === 2;
       return;
@@ -1187,6 +1366,10 @@ export function mountEditor(root, store, jot) {
   }
 
   function onPointerMove(e) {
+    if (handleDrag && e.pointerId === handleDrag.pointerId) {
+      moveHandleDrag(e);
+      return;
+    }
     if (selecting && e.pointerId === selecting.pointerId) {
       moveSelect(e);
       return;
@@ -1234,6 +1417,10 @@ export function mountEditor(root, store, jot) {
 
   function onPointerUp(e) {
     touches.delete(e.pointerId);
+    if (handleDrag && e.pointerId === handleDrag.pointerId) {
+      endHandleDrag();
+      return;
+    }
     if (selecting && e.pointerId === selecting.pointerId) {
       endSelect();
       return;
@@ -1332,6 +1519,7 @@ export function mountEditor(root, store, jot) {
       toggleShortcuts();
     } else if (e.key === 'Escape') {
       if (document.querySelector('.shortcuts') && !document.querySelector('.shortcuts').hidden) toggleShortcuts(false);
+      else if (imageEdit) setImageEdit(null);
       else if (selected) setSelected(null);
       else if (tool !== 'pen') setTool('pen');
       else location.hash = '#/';

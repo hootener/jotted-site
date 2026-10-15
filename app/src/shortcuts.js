@@ -15,7 +15,7 @@ export function shortcutGroups({ desktop = false } = {}) {
       ['Shift + arrows', 'Nudge everything'],
     ]],
     ['Annotate', [
-      ['V', 'Pointer: select, drag to move, double-click text to edit'],
+      ['V', 'Pointer: select, drag to move, double-click text to edit; a selected image gets Resize and Crop buttons'],
       ['B', 'Box'],
       ['A', 'Arrow'],
       ['T', 'Text (Enter commits, Shift+Enter new line)'],

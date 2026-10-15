@@ -369,6 +369,21 @@ html, body {
 }
 
 .help-btn { font-weight: 700; }
+.img-tools {
+  position: absolute;
+  z-index: 7;
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+}
+.img-tools .btn.icon { width: 28px; height: 28px; }
+.img-tools .btn.icon[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.img-tools svg { display: block; }
+.editor.ui-hidden .img-tools { display: none !important; }
 .cap-btn svg { display: block; }
 .group.capture { gap: 6px; }
 .btn.cap-delay { font-size: 12px; padding: 6px 9px; min-width: 40px; font-variant-numeric: tabular-nums; }
