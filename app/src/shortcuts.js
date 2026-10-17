@@ -45,7 +45,7 @@ export function shortcutGroups({ desktop = false } = {}) {
   groups.push([desktop ? 'Desktop app (work from any app while Jotted runs)' : 'Desktop app only', [
     [cap('J'), 'Capture a screen area into the open jot'],
     [cap('F'), 'Capture a full screen (click the monitor if you have several)'],
-    [cap('R'), 'Capture the last area again'],
+    [cap('L'), 'Capture the last area again'],
     ['⏱ button', 'Capture delay (0, 3, 5, 10 s); area is chosen first, then the countdown runs'],
     [k(MOD, 'N'), 'New jot'],
     [k(MOD, 'L'), 'All jots'],
